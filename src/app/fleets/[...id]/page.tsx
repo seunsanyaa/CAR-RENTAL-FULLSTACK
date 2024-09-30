@@ -2,7 +2,7 @@
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
-import TableOne from "@/components/Tables/TableOne";
+import VehicleManagement from "@/components/Vehicle/VehicleManagement";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -14,11 +14,11 @@ export const metadata: Metadata = {
 const FleetsPage = () => {
   return (
     <DefaultLayout>
-      <Breadcrumb pageName="Fleets" />
+      <Breadcrumb pageName="Toyota Fleet" />
 
       <div className="flex flex-col gap-10 h-full">
-{/* <VehicleManagement/> */}
-        <TableOne />
+<VehicleManagement/>
+
 
       </div>
     </DefaultLayout>

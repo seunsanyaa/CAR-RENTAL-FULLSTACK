@@ -1,9 +1,10 @@
 export type Booking = {
   name: string;
   category: string;
-  duration: string;
+  endDate: string;
   startDate: string;
   price: number;
   image: string;
-  customerEmail:string
+  customerEmail: string;
+  buildYear: number;
 };

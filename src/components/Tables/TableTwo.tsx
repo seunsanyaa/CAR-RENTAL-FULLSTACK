@@ -11,37 +11,41 @@ const productData: Booking[] = [
     image: "https://res.cloudinary.com/seunsanyaa/image/upload/v1727128200/1200px-2018_Tesla_Model_S_75D-1021681115_zp5tzj.jpg",
     name: "Tesla Model S",
     category: "Model S",
-    duration: '2 days',
-    startDate:'12-10-2024',
+    endDate: '15-10-24',
+    startDate: '12-10-2024',
     price: 15000,
     customerEmail: "john@example.com",
+    buildYear: 2018, // {{ edit_1 }} Added build year
   },
   {
     image: "https://res.cloudinary.com/seunsanyaa/image/upload/v1727128259/7b78edbb-ford-mustang-new-york-auto-show--3073935653_hkpna5.jpg",
     name: "Ford Mustang",
     category: "Mustang",
-    duration: '2 days',
-    startDate:'12-10-2024',
+    endDate: '15-10-24',
+    startDate: '12-10-2024',
     price: 15000,
     customerEmail: "jane@example.com",
+    buildYear: 2020, // {{ edit_2 }} Added build year
   },
   {
     image: "https://res.cloudinary.com/seunsanyaa/image/upload/v1727128309/chevrolet_camaro_ss-5-1307904132_cctxyj.jpg",
     name: "Chevrolet Camaro",
     category: "Camaro",
-    duration: '2 days',
-    startDate:'12-10-2024',
+    endDate: '15-10-24',
+    startDate: '12-10-2024',
     price: 15000,
     customerEmail: "bob@example.com",
+    buildYear: 2019, // {{ edit_3 }} Added build year
   },
   {
     image: "https://res.cloudinary.com/seunsanyaa/image/upload/v1727128359/New-BMW-3-Series-3759226992_mxqucu.jpg",
     name: "BMW 3 Series",
     category: "3 Series",
-    duration: '2 days',
-    startDate:'12-10-2024',
+    endDate: '15-10-24',
+    startDate: '12-10-2024',
     price: 15000,
     customerEmail: "alice@example.com",
+    buildYear: 2021, // {{ edit_4 }} Added build year
   },
 ];
 
@@ -75,19 +79,27 @@ const TableTwo = () => {
         </h4>
       </div>
 
-      <div className="grid grid-cols-7 border-t border-stroke px-4 py-4.5 dark:border-strokedark sm:grid-cols-10 md:px-6 2xl:px-7.5">
-        <div className="col-span-3 flex items-center">
+      <div className="grid grid-cols-9 border-t border-stroke px-4 py-4.5 dark:border-strokedark sm:grid-cols-10 md:px-6 2xl:px-7.5">
+        <div className="col-span-2 flex items-center">
           <p className="font-medium">Car Name</p>
         </div>
         <div className="col-span-1 hidden items-center sm:flex">
           <p className="font-medium">Model</p>
         </div>
+
         <div className="col-span-1 flex items-center">
-          <p className="font-medium">Duration</p>
+          <p className="font-medium"> Build Year</p>
         </div>
+     
         <div className="col-span-1 flex items-center">
           <p className="font-medium">Start-Date</p>
         </div>
+
+        <div className="col-span-1 flex items-center">
+          <p className="font-medium">End-Date</p>
+        </div>
+
+      
         <div className="col-span-1 flex items-center">
           <p className="font-medium">Price</p>
         </div>
@@ -101,10 +113,10 @@ const TableTwo = () => {
 
       {productData.map((product, key) => (
         <div
-          className="grid grid-cols-7 border-t border-stroke px-4 py-4.5 dark:border-strokedark sm:grid-cols-10 md:px-6 2xl:px-7.5"
+          className="grid grid-cols-9 border-t border-stroke px-4 py-4.5 dark:border-strokedark sm:grid-cols-10 md:px-6 2xl:px-7.5"
           key={key}
         >
-          <div className="col-span-3 flex items-center">
+          <div className="col-span-2 flex items-center">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="h-12.5 w-15 rounded-md">
                 <Image
@@ -124,13 +136,20 @@ const TableTwo = () => {
               {product.category}
             </p>
           </div>
-          <div className="col-span-1 flex items-center">
+       
+          <div className="col-span-1 hidden items-center sm:flex">
             <p className="text-sm text-black dark:text-white">
-              {product.duration}
+              {product.buildYear}
             </p>
           </div>
           <div className="col-span-1 flex items-center">
             <p className="text-sm text-black dark:text-white">{product.startDate}</p>
+          </div>
+
+          <div className="col-span-1 flex items-center">
+            <p className="text-sm text-black dark:text-white">
+              {product.endDate}
+            </p>
           </div>
           <div className="col-span-1 flex items-center">
             <p className="text-sm text-meta-3">${product.price}</p>
@@ -182,16 +201,18 @@ const TableTwo = () => {
                         onChange={handleInputChange}
                       />
                     </div>
+
                     <div>
-                      <label htmlFor="duration" className="text-sm font-medium">Duration</label>
+                      <label htmlFor="endDate" className="text-sm font-medium">Start Date</label>
                       <Input
-                        id="duration"
-                        name="duration"
-                        type="text"
-                        value={editingProduct.duration}
+                        id="endDate"
+                        name="endDate"
+                        type="date"
+                        value={editingProduct.endDate}
                         onChange={handleInputChange}
                       />
                     </div>
+                 
                     <div>
                       <label htmlFor="price" className="text-sm font-medium">Price</label>
                       <Input
@@ -223,5 +244,6 @@ const TableTwo = () => {
     </div>
   );
 };
+
 
 export default TableTwo;
