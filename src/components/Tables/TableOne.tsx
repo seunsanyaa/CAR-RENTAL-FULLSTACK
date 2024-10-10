@@ -2,7 +2,7 @@
 
 import { Car } from "@/types/car";
 import axios from "axios";
-import { Copy } from "lucide-react";
+import { Copy, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
@@ -36,6 +36,7 @@ const TableOne = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const handleDelete = async (registrationNumber: string) => {
     setLoading(true);
@@ -212,6 +213,18 @@ const TableOne = () => {
     setIsAddingCar(true);
   };
 
+  const toggleRow = (registrationNumber: string) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(registrationNumber)) {
+        newSet.delete(registrationNumber);
+      } else {
+        newSet.add(registrationNumber);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
       <div className="flex justify-between items-center mb-4">
@@ -323,179 +336,202 @@ const TableOne = () => {
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                <th className="py-4 px-4 font-medium text-black dark:text-white"></th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Image</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Model</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Color</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Maker</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Last Maintenance</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Available</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Year</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Disabled</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Reg. Number</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {carData.map((car, index) => (
-                <tr key={index} className="border-b border-stroke dark:border-strokedark">
-                  <td className="py-3 px-4">
-                    {car.pictures && car.pictures.length > 0 ? (
-                      <Image 
-                        src={car.pictures[0]} 
-                        alt={`${car.maker} ${car.model}`}
-                        width={50}
-                        height={50}
-                        className="rounded-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = "/path/to/fallback-image.jpg"
-                        }}
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-gray-500 text-xs">No image</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">{car.model}</td>
-                  <td className="py-3 px-4">{car.color}</td>
-                  <td className="py-3 px-4">{car.maker}</td>
-                  <td className="py-3 px-4">{car.lastMaintenanceDate}</td>
-                  <td className="py-3 px-4">{car.available ? "Yes" : "No"}</td>
-                  <td className="py-3 px-4">{car.year}</td>
-                  <td className="py-3 px-4">{car.disabled ? "Yes" : "No"}</td>
-                  <td className="py-3 px-4">{car.registrationNumber}</td>
-                  <td className="py-3 px-4 flex space-x-2">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(car)}>Edit</Button>
-                      </SheetTrigger>
-                      <SheetContent>
-                        <SheetHeader>
-                          <SheetTitle>Edit Car</SheetTitle>
-                          <SheetDescription>
-                            Make changes to the car details here. Click save when you&apos;re done.
-                          </SheetDescription>
-                        </SheetHeader>
-                        {editingCar && car.registrationNumber === editingCar.registrationNumber && (
-                          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                            <div>
-                              <label htmlFor="model" className="text-sm font-medium">
-                                Model
-                              </label>
-                              <Input
-                                id="model"
-                                name="model"
-                                value={editingCar.model}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="color" className="text-sm font-medium">
-                                Color
-                              </label>
-                              <Input
-                                id="color"
-                                name="color"
-                                value={editingCar.color}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="maker" className="text-sm font-medium">
-                                Maker
-                              </label>
-                              <Input
-                                id="maker"
-                                name="maker"
-                                value={editingCar.maker}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="lastMaintenanceDate" className="text-sm font-medium">
-                                Last Maintenance Date
-                              </label>
-                              <Input
-                                id="lastMaintenanceDate"
-                                name="lastMaintenanceDate"
-                                type="date"
-                                value={editingCar.lastMaintenanceDate}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div className="flex items-center">
-                              <label htmlFor="available" className="text-sm font-medium mr-2">
-                                Available
-                              </label>
-                              <input
-                                id="available"
-                                name="available"
-                                type="checkbox"
-                                checked={editingCar.available}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="year" className="text-sm font-medium">
-                                Year
-                              </label>
-                              <Input
-                                id="year"
-                                name="year"
-                                type="number"
-                                value={editingCar.year}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div className="flex items-center">
-                              <label htmlFor="disabled" className="text-sm font-medium mr-2">
-                                Disabled
-                              </label>
-                              <input
-                                id="disabled"
-                                name="disabled"
-                                type="checkbox"
-                                checked={editingCar.disabled}
-                                onChange={handleInputChange}
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor="registrationNumber" className="text-sm font-medium">
-                                Registration Number
-                              </label>
-                              <Input
-                                id="registrationNumber"
-                                name="registrationNumber"
-                                value={editingCar.registrationNumber}
-                                onChange={handleInputChange}
-                                disabled // Assuming registration number shouldn't be editable
-                              />
-                            </div>
-                            <div className="mt-4">
-                              <Button type="submit" className="text-white w-full">
-                                Save Changes
-                              </Button>
-                            </div>
-                          </form>
+              {carData.map((car) => (
+                <React.Fragment key={car.registrationNumber}>
+                  <tr className="border-b border-stroke dark:border-strokedark">
+                    <td className="py-3 px-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleRow(car.registrationNumber)}
+                      >
+                        {expandedRows.has(car.registrationNumber) ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
                         )}
-                      </SheetContent>
-                    </Sheet>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDelete(car.registrationNumber)}
-                    >
-                      Delete
-                    </Button>
-                    <Link href={`/cars/${car.registrationNumber}`}>
-                      <Button variant="link" size="sm">View</Button>
-                    </Link>
-                    <Button variant="outline" size="sm" onClick={() => handleCopyCar(car)}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Clone
-                    </Button>
-                  </td>
-                </tr>
+                      </Button>
+                    </td>
+                    <td className="py-3 px-4">
+                      {car.pictures && car.pictures.length > 0 ? (
+                        <Image 
+                          src={car.pictures[0]} 
+                          alt={`${car.maker} ${car.model}`}
+                          width={50}
+                          height={50}
+                          className="rounded-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/path/to/fallback-image.jpg"
+                          }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-gray-500 text-xs">No image</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">{car.model}</td>
+                    <td className="py-3 px-4">{car.maker}</td>
+                    <td className="py-3 px-4">{car.registrationNumber}</td>
+                    <td className="py-3 px-4 flex space-x-2">
+                      <Sheet>
+                        <SheetTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(car)}>Edit</Button>
+                        </SheetTrigger>
+                        <SheetContent>
+                          <SheetHeader>
+                            <SheetTitle>Edit Car</SheetTitle>
+                            <SheetDescription>
+                              Make changes to the car details here. Click save when you&apos;re done.
+                            </SheetDescription>
+                          </SheetHeader>
+                          {editingCar && car.registrationNumber === editingCar.registrationNumber && (
+                            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                              <div>
+                                <label htmlFor="model" className="text-sm font-medium">
+                                  Model
+                                </label>
+                                <Input
+                                  id="model"
+                                  name="model"
+                                  value={editingCar.model}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="color" className="text-sm font-medium">
+                                  Color
+                                </label>
+                                <Input
+                                  id="color"
+                                  name="color"
+                                  value={editingCar.color}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="maker" className="text-sm font-medium">
+                                  Maker
+                                </label>
+                                <Input
+                                  id="maker"
+                                  name="maker"
+                                  value={editingCar.maker}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="lastMaintenanceDate" className="text-sm font-medium">
+                                  Last Maintenance Date
+                                </label>
+                                <Input
+                                  id="lastMaintenanceDate"
+                                  name="lastMaintenanceDate"
+                                  type="date"
+                                  value={editingCar.lastMaintenanceDate}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div className="flex items-center">
+                                <label htmlFor="available" className="text-sm font-medium mr-2">
+                                  Available
+                                </label>
+                                <input
+                                  id="available"
+                                  name="available"
+                                  type="checkbox"
+                                  checked={editingCar.available}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="year" className="text-sm font-medium">
+                                  Year
+                                </label>
+                                <Input
+                                  id="year"
+                                  name="year"
+                                  type="number"
+                                  value={editingCar.year}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div className="flex items-center">
+                                <label htmlFor="disabled" className="text-sm font-medium mr-2">
+                                  Disabled
+                                </label>
+                                <input
+                                  id="disabled"
+                                  name="disabled"
+                                  type="checkbox"
+                                  checked={editingCar.disabled}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="registrationNumber" className="text-sm font-medium">
+                                  Registration Number
+                                </label>
+                                <Input
+                                  id="registrationNumber"
+                                  name="registrationNumber"
+                                  value={editingCar.registrationNumber}
+                                  onChange={handleInputChange}
+                                  disabled // Assuming registration number shouldn't be editable
+                                />
+                              </div>
+                              <div className="mt-4">
+                                <Button type="submit" className="text-white w-full">
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </form>
+                          )}
+                        </SheetContent>
+                      </Sheet>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDelete(car.registrationNumber)}
+                      >
+                        Delete
+                      </Button>
+                      <Link href={`/cars/${car.registrationNumber}`}>
+                        <Button variant="link" size="sm">View</Button>
+                      </Link>
+                      <Button variant="outline" size="sm" onClick={() => handleCopyCar(car)}>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Clone
+                      </Button>
+                    </td>
+                  </tr>
+                  {expandedRows.has(car.registrationNumber) && (
+                    <tr className="bg-gray-50 dark:bg-gray-800">
+                      <td colSpan={6} className="py-3 px-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p><strong>Color:</strong> {car.color}</p>
+                            <p><strong>Year:</strong> {car.year}</p>
+                            <p><strong>Last Maintenance:</strong> {car.lastMaintenanceDate}</p>
+                          </div>
+                          <div>
+                            <p><strong>Available:</strong> {car.available ? "Yes" : "No"}</p>
+                            <p><strong>Disabled:</strong> {car.disabled ? "Yes" : "No"}</p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
