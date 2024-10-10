@@ -1,413 +1,506 @@
 "use client"
 
-import { Fleet } from "@/types/fleet";
+import { Car } from "@/types/car";
+import axios from "axios";
+import { Copy } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../ui/sheet";
+import Image from 'next/image';
 
-const initialFleetData: Fleet[] = [
-  {
-    name: 'Tesla',
-    model: 'Model 3',
-    carCount: 25,
-    averageMileage: 353,
-    fuelType: 'electric',
-    photos: ['tesla_model3_1.jpg', 'tesla_model3_2.jpg'],
-    specifications: '0-60 mph in 3.1s, 358 mile range, AWD',
-    features: 'Autopilot, 15" touchscreen, Glass roof',
-    pricing: '$41,190 - $53,190',
-  },
-  {
-    name: 'Toyota',
-    model: 'Prius',
-    carCount: 30,
-    averageMileage: 54,
-    fuelType: 'hybrid',
-    photos: ['toyota_prius_1.jpg', 'toyota_prius_2.jpg'],
-    specifications: '1.8L 4-cylinder hybrid, 121 hp combined',
-    features: 'Toyota Safety Sense 2.0, 7" touch-screen, Apple CarPlay',
-    pricing: '$25,075 - $33,370',
-  },
-  {
-    name: 'Ford',
-    model: 'F-150',
-    carCount: 20,
-    averageMileage: 25,
-    fuelType: 'gasoline',
-    photos: ['ford_f150_1.jpg', 'ford_f150_2.jpg'],
-    specifications: '3.3L V6, 290 hp, 10-speed automatic',
-    features: 'SYNC 4, Pro Trailer Backup Assist, 12" touchscreen',
-    pricing: '$30,870 - $75,835',
-  },
-  {
-    name: 'Nissan',
-    model: 'Leaf',
-    carCount: 15,
-    averageMileage: 226,
-    fuelType: 'electric',
-    photos: ['nissan_leaf_1.jpg', 'nissan_leaf_2.jpg'],
-    specifications: '147 hp, 62 kWh battery, 226 mile range',
-    features: 'ProPILOT Assist, e-Pedal, 8" touch-screen display',
-    pricing: '$27,800 - $37,400',
-  },
-  {
-    name: 'Honda',
-    model: 'Civic',
-    carCount: 35,
-    averageMileage: 36,
-    fuelType: 'gasoline',
-    photos: ['honda_civic_1.jpg', 'honda_civic_2.jpg'],
-    specifications: '2.0L 4-cylinder, 158 hp, CVT',
-    features: 'Honda Sensing, 7" touch-screen, Apple CarPlay',
-    pricing: '$22,350 - $29,850',
-  },
-];
+const API_BASE_URL = 'https://third-elk-244.convex.cloud/api';
 
 const TableOne = () => {
-  const [fleetData, setFleetData] = useState<Fleet[]>(initialFleetData);
-  const [editingFleet, setEditingFleet] = useState<Fleet | null>(null);
-  const [isAddingFleet, setIsAddingFleet] = useState(false);
-  const [newFleet, setNewFleet] = useState({
-    name: '',
-    model: '',
-    carCount: '',
-    averageMileage: '',
-    fuelType: '',
-    photos: [],
-    specifications: '',
-    features: '',
-    pricing: '',
+  const [carData, setCarData] = useState<Car[]>([]);
+  const [editingCar, setEditingCar] = useState<Car | null>(null);
+  const [isAddingCar, setIsAddingCar] = useState(false);
+  const [newCar, setNewCar] = useState({
+    model: "",
+    color: "",
+    maker: "",
+    lastMaintenanceDate: "",
+    available: false,
+    year: 0,
+    disabled: false,
+    registrationNumber: "",
+    pictures: [] as string[],
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = (name: string) => {
-    setFleetData(fleetData.filter(fleet => fleet.name !== name));
+  const handleDelete = async (registrationNumber: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/mutation`, {
+        path: "car:deleteCar",
+        args: { registrationNumber }
+      });
+      if (response.data) {
+        setCarData(carData.filter((car) => car.registrationNumber !== registrationNumber));
+      }
+    } catch (err) {
+      console.error('Error deleting car:', err);
+      setError('Failed to delete car. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEdit = (fleet: Fleet) => {
-    setEditingFleet({ ...fleet });
+  const handleEdit = (car: Car) => {
+    setEditingCar({ ...car });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewFleet(prev => ({
-      ...prev,
-      [name]: name === 'carCount' || name === 'averageMileage' ? parseInt(value) : value
-    }));
-  };
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : false;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setNewFleet(prev => ({
+    if (name === "pictures") {
+      setNewCar((prev) => ({
         ...prev,
-        photos: Array.from(e.target.files!)
+        pictures: value.split(',').map(url => url.trim()),
+      }));
+    } else {
+      setNewCar((prev) => ({
+        ...prev,
+        [name]:
+          type === "checkbox"
+            ? checked
+            : name === "year"
+            ? parseInt(value)
+            : value,
       }));
     }
-  };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (editingFleet) {
-      setFleetData(fleetData.map(fleet => fleet.name === editingFleet.name ? editingFleet : fleet));
-      setEditingFleet(null);
+    if (editingCar) {
+      setEditingCar((prev: Car | null) =>
+        prev
+          ? {
+              ...prev,
+              [name]:
+                name === "pictures"
+                  ? value.split(',').map(url => url.trim())
+                  : type === "checkbox"
+                  ? checked
+                  : name === "year"
+                  ? parseInt(value)
+                  : value,
+            }
+          : null
+      );
     }
   };
 
-  const handleAddFleetSubmit = (e:any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (editingCar) {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.post(`${API_BASE_URL}/mutation`, {
+          path: "car:updateCar",
+          args: {
+            registrationNumber: editingCar.registrationNumber,
+            model: editingCar.model,
+            color: editingCar.color,
+            maker: editingCar.maker,
+            lastMaintenanceDate: editingCar.lastMaintenanceDate,
+            available: editingCar.available,
+            year: editingCar.year,
+            disabled: editingCar.disabled,
+            pictures: editingCar.pictures,
+          }
+        });
+        if (response.data) {
+          setCarData(carData.map((car) =>
+            car.registrationNumber === editingCar.registrationNumber ? editingCar : car
+          ));
+          setEditingCar(null);
+        }
+      } catch (err) {
+        console.error('Error updating car:', err);
+        setError('Failed to update car. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
-    // setNewFleet({
-    //   name: '',
-    //   model: '',
-    //   carCount: '',
-    //   averageMileage: '',
-    //   fuelType: '',
-    // });
-    setIsAddingFleet(false); // Close modal after submitting
+  const fetchCars = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "car:getAllCars",
+        args: {},
+        format: "json" 
+      });
+      if (response.data) {
+        console.log(response.data);
+        setCarData(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching cars:', err);
+      setError('Failed to fetch cars. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCars();
+  }, [newCar]);
+
+  const handleAddCarSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/mutation`, {
+        path: "car:createCar",
+        args: {
+          model: newCar.model,
+          color: newCar.color,
+          maker: newCar.maker,
+          lastMaintenanceDate: newCar.lastMaintenanceDate,
+          available: newCar.available,
+          year: newCar.year,
+          registrationNumber: newCar.registrationNumber,
+          pictures: newCar.pictures,
+        }
+      });
+      if (response.data) {
+        setCarData([...carData, response.data]);
+        setNewCar({
+          model: "",
+          color: "",
+          maker: "",
+          lastMaintenanceDate: "",
+          available: false,
+          year: 0,
+          disabled: false,
+          registrationNumber: "",
+          pictures: [],
+        });
+        setIsAddingCar(false);
+      }
+    } catch (err) {
+      console.error('Error adding car:', err);
+      setError('Failed to add car. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyCar = (car: Car) => {
+    setNewCar({
+      ...car,
+      registrationNumber: '', // Clear the registration number as it should be unique
+      pictures: [...car.pictures], // Include the pictures array
+    });
+    setIsAddingCar(true);
   };
 
   return (
-    <div className="rounded-sm border border-stroke bg-white px-5 pb-2.5 pt-6 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1 min-h-[100vh]">
-       
-      
-      <div className="flex justify-between">
-   <h4 className="mb-6 text-xl font-semibold text-black dark:text-white">
-        Fleet Overview
-      </h4>
-      <Sheet>
+    <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-xl font-semibold text-black dark:text-white">Cars Overview</h4>
+        <Sheet open={isAddingCar} onOpenChange={setIsAddingCar}>
           <SheetTrigger asChild>
-     <Button color="white" variant={'default'} className="text-white">
-        Add Fleet
-      </Button>      
-      
+            <Button variant="default" className="text-white">Add Car</Button>
           </SheetTrigger>
-          <SheetContent className="overflow-y-auto max-h-screen">
+          <SheetContent>
             <div className="h-full flex flex-col">
               <SheetHeader>
-                <SheetTitle>Add New Fleet</SheetTitle>
+                <SheetTitle>Add New Car</SheetTitle>
                 <SheetDescription>
-                  Enter the details of the new fleet below. Click &quot;Add&quot; to save.
+                  Enter the details of the new car below. Click &quot;Add&quot; to save.
                 </SheetDescription>
               </SheetHeader>
-              <form onSubmit={handleAddFleetSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
-                <div>
-                  <label htmlFor="name" className="text-sm font-medium">Brand</label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={newFleet.name}
-                    onChange={handleInputChange}
-                  />
-                </div>
+              <form onSubmit={handleAddCarSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
                 <div>
                   <label htmlFor="model" className="text-sm font-medium">Model</label>
                   <Input
                     id="model"
                     name="model"
-                    value={newFleet.model}
+                    value={newCar.model}
                     onChange={handleInputChange}
                   />
                 </div>
                 <div>
-                  <label htmlFor="carCount" className="text-sm font-medium">Car Count</label>
+                  <label htmlFor="color" className="text-sm font-medium">Color</label>
                   <Input
-                    id="carCount"
-                    name="carCount"
+                    id="color"
+                    name="color"
+                    value={newCar.color}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="maker" className="text-sm font-medium">Maker</label>
+                  <Input
+                    id="maker"
+                    name="maker"
+                    value={newCar.maker}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastMaintenanceDate" className="text-sm font-medium">Last Maintenance Date</label>
+                  <Input
+                    id="lastMaintenanceDate"
+                    name="lastMaintenanceDate"
+                    type="date"
+                    value={newCar.lastMaintenanceDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="flex items-center">
+                  <label htmlFor="available" className="text-sm font-medium mr-2">Available</label>
+                  <input
+                    id="available"
+                    name="available"
+                    type="checkbox"
+                    checked={newCar.available}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="year" className="text-sm font-medium">Year</label>
+                  <Input
+                    id="year"
+                    name="year"
                     type="number"
-                    value={newFleet.carCount}
+                    value={newCar.year}
                     onChange={handleInputChange}
                   />
                 </div>
                 <div>
-                  <label htmlFor="averageMileage" className="text-sm font-medium">Average Mileage</label>
+                  <label htmlFor="registrationNumber" className="text-sm font-medium">Registration Number</label>
                   <Input
-                    id="averageMileage"
-                    name="averageMileage"
-                    type="number"
-                    value={newFleet.averageMileage}
+                    id="registrationNumber"
+                    name="registrationNumber"
+                    value={newCar.registrationNumber}
                     onChange={handleInputChange}
                   />
                 </div>
                 <div>
-                  <label htmlFor="fuelType" className="text-sm font-medium">Fuel Type</label>
+                  <label htmlFor="pictures" className="text-sm font-medium">Picture URLs (comma-separated)</label>
                   <Input
-                    id="fuelType"
-                    name="fuelType"
-                    value={newFleet.fuelType}
+                    id="pictures"
+                    name="pictures"
+                    value={newCar.pictures.join(', ')}
                     onChange={handleInputChange}
                   />
                 </div>
-                <div>
-                  <label htmlFor="photos" className="text-sm font-medium">Vehicle Photos</label>
-                  <Input
-                    id="photos"
-                    name="photos"
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    accept="image/*"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="specifications" className="text-sm font-medium">Specifications</label>
-                  <textarea
-                    id="specifications"
-                    name="specifications"
-                    value={newFleet.specifications}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="features" className="text-sm font-medium">Features</label>
-                  <textarea
-                    id="features"
-                    name="features"
-                    value={newFleet.features}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded-md"
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="pricing" className="text-sm font-medium">Pricing</label>
-                  <Input
-                    id="pricing"
-                    name="pricing"
-                    type="text"
-                    value={newFleet.pricing}
-                    onChange={handleInputChange}
-                    placeholder="e.g., $30,000 - $45,000"
-                  />
+                <div className="mt-4">
+                  <Button type="submit" className="text-white w-full">
+                    Add Car
+                  </Button>
                 </div>
               </form>
-              <div className="mt-4">
-                <Button type="submit" className="text-white w-full">Add Fleet</Button>
-              </div>
             </div>
           </SheetContent>
         </Sheet>
-      {/* <Button onClick={() => setIsAddingFleet(true)}>
-        Add Fleet
-      </Button> */}
       </div>
-      <div className="flex flex-col">
-        <div className="grid grid-cols-3 rounded-sm bg-gray-2 dark:bg-meta-4 sm:grid-cols-7">
-          <div className="p-2.5 xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-              Brand
-            </h5>
-          </div>
-          <div className="p-2.5 text-center xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-              Model
-            </h5>
-          </div>
-          <div className="p-2.5 text-center xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-              Car Count
-            </h5>
-          </div>
-          <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-              Avg. Mileage
-            </h5>
-          </div>
-          <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-              Fuel Type
-            </h5>
-          </div>
-          <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-            
-            </h5>
-          </div>
-          <div className="hidden p-2.5 text-center sm:block xl:p-5">
-            <h5 className="text-sm font-medium uppercase xsm:text-base">
-         
-            </h5>
-          </div>
-        </div>
-
-        {fleetData.map((fleet,index) => (
-          <div
-            className="grid grid-cols-3 sm:grid-cols-7 border-b border-stroke dark:border-strokedark"
-            key={index}
-          >
-            <div className="flex items-center gap-3 p-2.5 xl:p-5">
-              <p className="text-black dark:text-white">
-                {fleet.name}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center p-2.5 xl:p-5">
-              <p className="text-black dark:text-white">{fleet.model}</p>
-            </div>
-
-            <div className="flex items-center justify-center p-2.5 xl:p-5">
-              <p className="text-meta-3">{fleet.carCount}</p>
-            </div>
-
-            <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-              <p className="text-black dark:text-white">{fleet.averageMileage} mpg</p>
-            </div>
-
-            <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-              <p className="text-meta-5">{fleet.fuelType}</p>
-            </div>
-
-            <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-
-        
-              <Sheet>
-                <SheetTrigger asChild>
-
-                  {/* <Link href={'/fleets/id'}> */}
-                    
-                  <Button variant="outline" size="sm" onClick={()=>handleEdit(fleet)}>
-                    Edit
+      
+      {loading && <p>Loading...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+      
+      {!loading && !error && (
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Image</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Model</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Color</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Maker</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Last Maintenance</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Available</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Year</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Disabled</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Reg. Number</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {carData.map((car, index) => (
+                <tr key={index} className="border-b border-stroke dark:border-strokedark">
+                  <td className="py-3 px-4">
+                    {car.pictures && car.pictures.length > 0 ? (
+                      <Image 
+                        src={car.pictures[0]} 
+                        alt={`${car.maker} ${car.model}`}
+                        width={50}
+                        height={50}
+                        className="rounded-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/path/to/fallback-image.jpg"
+                        }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span className="text-gray-500 text-xs">No image</span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">{car.model}</td>
+                  <td className="py-3 px-4">{car.color}</td>
+                  <td className="py-3 px-4">{car.maker}</td>
+                  <td className="py-3 px-4">{car.lastMaintenanceDate}</td>
+                  <td className="py-3 px-4">{car.available ? "Yes" : "No"}</td>
+                  <td className="py-3 px-4">{car.year}</td>
+                  <td className="py-3 px-4">{car.disabled ? "Yes" : "No"}</td>
+                  <td className="py-3 px-4">{car.registrationNumber}</td>
+                  <td className="py-3 px-4 flex space-x-2">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(car)}>Edit</Button>
+                      </SheetTrigger>
+                      <SheetContent>
+                        <SheetHeader>
+                          <SheetTitle>Edit Car</SheetTitle>
+                          <SheetDescription>
+                            Make changes to the car details here. Click save when you&apos;re done.
+                          </SheetDescription>
+                        </SheetHeader>
+                        {editingCar && car.registrationNumber === editingCar.registrationNumber && (
+                          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                            <div>
+                              <label htmlFor="model" className="text-sm font-medium">
+                                Model
+                              </label>
+                              <Input
+                                id="model"
+                                name="model"
+                                value={editingCar.model}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="color" className="text-sm font-medium">
+                                Color
+                              </label>
+                              <Input
+                                id="color"
+                                name="color"
+                                value={editingCar.color}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="maker" className="text-sm font-medium">
+                                Maker
+                              </label>
+                              <Input
+                                id="maker"
+                                name="maker"
+                                value={editingCar.maker}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="lastMaintenanceDate" className="text-sm font-medium">
+                                Last Maintenance Date
+                              </label>
+                              <Input
+                                id="lastMaintenanceDate"
+                                name="lastMaintenanceDate"
+                                type="date"
+                                value={editingCar.lastMaintenanceDate}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div className="flex items-center">
+                              <label htmlFor="available" className="text-sm font-medium mr-2">
+                                Available
+                              </label>
+                              <input
+                                id="available"
+                                name="available"
+                                type="checkbox"
+                                checked={editingCar.available}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="year" className="text-sm font-medium">
+                                Year
+                              </label>
+                              <Input
+                                id="year"
+                                name="year"
+                                type="number"
+                                value={editingCar.year}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div className="flex items-center">
+                              <label htmlFor="disabled" className="text-sm font-medium mr-2">
+                                Disabled
+                              </label>
+                              <input
+                                id="disabled"
+                                name="disabled"
+                                type="checkbox"
+                                checked={editingCar.disabled}
+                                onChange={handleInputChange}
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="registrationNumber" className="text-sm font-medium">
+                                Registration Number
+                              </label>
+                              <Input
+                                id="registrationNumber"
+                                name="registrationNumber"
+                                value={editingCar.registrationNumber}
+                                onChange={handleInputChange}
+                                disabled // Assuming registration number shouldn't be editable
+                              />
+                            </div>
+                            <div className="mt-4">
+                              <Button type="submit" className="text-white w-full">
+                                Save Changes
+                              </Button>
+                            </div>
+                          </form>
+                        )}
+                      </SheetContent>
+                    </Sheet>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDelete(car.registrationNumber)}
+                    >
+                      Delete
                     </Button>
-                    
-                    {/* </Link> */}
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Edit Fleet</SheetTitle>
-                    <SheetDescription>
-                      Make changes to the fleet here. Click save when you&apos;re done.
-                    </SheetDescription>
-                  </SheetHeader>
-                  {editingFleet && (
-                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                      <div>
-                        <label htmlFor="name" className="text-sm font-medium">Brand</label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={editingFleet.name}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="model" className="text-sm font-medium">Model</label>
-                        <Input
-                          id="model"
-                          name="model"
-                          value={editingFleet.model}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="carCount" className="text-sm font-medium">Car Count</label>
-                        <Input
-                          id="carCount"
-                          name="carCount"
-                          type="number"
-                          value={editingFleet.carCount}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="averageMileage" className="text-sm font-medium">Average Mileage</label>
-                        <Input
-                          id="averageMileage"
-                          name="averageMileage"
-                          type="number"
-                          value={editingFleet.averageMileage}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="fuelType" className="text-sm font-medium">Fuel Type</label>
-                        <Input
-                          id="fuelType"
-                          name="fuelType"
-                          value={editingFleet.fuelType}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <Button type="submit">Save Changes</Button>
-                    </form>
-                  )}
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-
-              <Link  href={'/fleets/id'}>
-              
-              <Button variant="link" size="sm" >
-                View
-                </Button>
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
+                    <Link href={`/cars/${car.registrationNumber}`}>
+                      <Button variant="link" size="sm">View</Button>
+                    </Link>
+                    <Button variant="outline" size="sm" onClick={() => handleCopyCar(car)}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Clone
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
