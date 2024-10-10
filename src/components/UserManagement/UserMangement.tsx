@@ -5,6 +5,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
+import StaffTable from "../Tables/staff";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -52,138 +53,10 @@ const UserManagement = () => {
 
   
       <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-        <div className="grid gap-8 bg-white">
-          <Card> 
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>View and manage customer profiles, roles, and activity logs.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead>
-                      <span className="sr-only">Actions</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium">John Doe</TableCell>
-                    <TableCell>john@example.com</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Admin</Badge>
-                    </TableCell>
-                    <TableCell>2023-04-15 10:30 AM</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MenuIcon className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleEditClick({ name: "John Doe", email: "john@example.com", role: "Admin" })
-                            }>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleDeleteClick({ name: "John Doe", email: "john@example.com", role: "Admin" })
-                            }>
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Jane Smith</TableCell>
-                    <TableCell>jane@example.com</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Customer</Badge>
-                    </TableCell>
-                    <TableCell>2023-03-28 2:45 PM</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MenuIcon className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleEditClick({ name: "Jane Smith", email: "jane@example.com", role: "Customer" })
-                            }>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleDeleteClick({ name: "Jane Smith", email: "jane@example.com", role: "Customer" })
-                            }>
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Michael Johnson</TableCell>
-                    <TableCell>michael@example.com</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Customer</Badge>
-                    </TableCell>
-                    <TableCell>2023-05-01 9:00 AM</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MenuIcon className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleEditClick({
-                                name: "Michael Johnson",
-                                email: "michael@example.com",
-                                role: "Customer",
-                              })
-                            }>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleDeleteClick({
-                                name: "Michael Johnson",
-                                email: "michael@example.com",
-                                role: "Customer",
-                              })
-                            }>
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+
+
+        <StaffTable/>
+        
       </main>
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="sm:max-w-md">
