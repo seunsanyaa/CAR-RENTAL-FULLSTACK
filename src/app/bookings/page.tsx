@@ -1,8 +1,8 @@
 
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import TableTwo from "@/components/Tables/TableTwo";
 
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
+import BookingsTable from "@/components/Tables/bookingsTable";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ const TablesPage = () => {
 
       <div className="flex flex-col gap-10 h-full">
 
-        <TableTwo />
+        <BookingsTable/>
 
       </div>
     </DefaultLayout>

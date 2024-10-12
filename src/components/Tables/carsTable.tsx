@@ -19,7 +19,7 @@ import Image from 'next/image';
 
 const API_BASE_URL = 'https://third-elk-244.convex.cloud/api';
 
-const TableOne = () => {
+const CarsTable = () => {
   const [carData, setCarData] = useState<Car[]>([]);
   const [editingCar, setEditingCar] = useState<Car | null>(null);
   const [isAddingCar, setIsAddingCar] = useState(false);
@@ -543,4 +543,4 @@ const TableOne = () => {
   );
 };
 
-export default TableOne;
+export default CarsTable;

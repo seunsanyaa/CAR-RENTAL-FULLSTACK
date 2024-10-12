@@ -18,13 +18,38 @@ import {
 
 const API_BASE_URL = 'https://third-elk-244.convex.cloud/api';
 
-const StaffTable = () => {
-  const [staffData, setStaffData] = useState<(StaffMember & { user?: User })[]>([]);
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [isAddingStaff, setIsAddingStaff] = useState(false);
-  const [newStaff, setNewStaff] = useState({
-    role: "",
-    email: "",
+// Add this type definition at the top of the file
+type Booking = {
+  _id: string; // Assuming each booking has a unique ID
+  customerId: string;
+  carId: string;
+  startDate: string;
+  endDate: string;
+  totalCost: number;
+  paidAmount: number;
+  status: string;
+  pickupLocation: string;
+  dropoffLocation: string;
+  customerInsurancetype: string;
+  customerInsuranceNumber: string;
+};
+
+const BookingsTable = () => {
+  const [bookingsData, setBookingsData] = useState<(Booking & { user?: User })[]>([]);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [isAddingBooking, setIsAddingBooking] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    customerId: '',
+    carId: '',
+    startDate: '',
+    endDate: '',
+    totalCost: 0,
+    paidAmount: 0,
+    status: '',
+    pickupLocation: '',
+    dropoffLocation: '',
+    customerInsurancetype: '',
+    customerInsuranceNumber: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,173 +60,125 @@ const StaffTable = () => {
     setError(null);
     try {
       const response = await axios.post(`${API_BASE_URL}/mutation`, {
-        path: "staff:deleteStaffMember",
+        path: "bookings:deleteBooking",
         args: { id }
       });
       if (response.data) {
-        setStaffData(staffData.filter((staff) => staff._id !== id));
+        setBookingsData(bookingsData.filter((booking) => booking._id !== id));
       }
     } catch (err) {
-      console.error('Error deleting staff member:', err);
-      setError('Failed to delete staff member. Please try again.');
+      console.error('Error deleting booking:', err);
+      setError('Failed to delete booking. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (staff: StaffMember) => {
-    setEditingStaff({ ...staff });
+  const handleEdit = (booking: Booking) => {
+    setEditingBooking({ ...booking });
   };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
-    const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : false;
+    const { name, value } = e.target;
+    const newValue = name === 'totalCost' || name === 'paidAmount' ? parseFloat(value) : value;
 
-    setNewStaff((prev) => ({
+    setNewBooking((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
+      [name]: newValue,
     }));
 
-    if (editingStaff) {
-      setEditingStaff((prev: StaffMember | null) =>
-        prev
-          ? {
-              ...prev,
-              [name]:
-                type === "checkbox"
-                  ? checked
-                  : value,
-            }
-          : null
+    if (editingBooking) {
+      setEditingBooking((prev) =>
+        prev ? { ...prev, [name]: newValue } : null
       );
     }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (editingStaff) {
+    if (editingBooking) {
       setLoading(true);
       setError(null);
       try {
         const response = await axios.post(`${API_BASE_URL}/mutation`, {
-          path: "staff:updateStaffMember",
-          args: {
-            id: editingStaff._id,
-            role: editingStaff.role,
-            email: editingStaff.email,
-          }
+          path: "bookings:updateBooking",
+          args: editingBooking
         });
         if (response.data) {
-          setStaffData(staffData.map((staff) =>
-            staff._id === editingStaff._id ? editingStaff : staff
+          setBookingsData(bookingsData.map((booking) =>
+            booking._id === editingBooking._id ? editingBooking : booking
           ));
-          setEditingStaff(null);
+          setEditingBooking(null);
         }
       } catch (err) {
-        console.error('Error updating staff member:', err);
-        setError('Failed to update staff member. Please try again.');
+        console.error('Error updating booking:', err);
+        setError('Failed to update booking. Please try again.');
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const fetchStaff = async () => {
+  const fetchBookings = async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await axios.post(`${API_BASE_URL}/query`, {
-        path: "staff:getAllStaff",
+        path: "bookings:getAllBookings",
         args: {}
       });
       if (response.data) {
-        const staffMembers = response.data.value;
-        const staffWithUserDetails = await Promise.all(
-          staffMembers.map(async (staff: StaffMember) => {
-            const userResponse = await axios.post(`${API_BASE_URL}/query`, {
-              path: "users:getUserByEmail",
-              args: { email: staff.email }
-            });
-            return { ...staff, user: userResponse.data.value };
-          })
-        );
-
-        console.log(staffWithUserDetails)
-        setStaffData(staffWithUserDetails);
+        const bookings = response.data.value;
+        setBookingsData(bookings);
       }
     } catch (err) {
-      console.error('Error fetching staff members:', err);
-      setError('Failed to fetch staff members. Please try again.');
+      console.error('Error fetching bookings:', err);
+      setError('Failed to fetch bookings. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStaff();
-  }, [newStaff]);
+    fetchBookings();
+  }, []);
 
-  const handleAddStaffSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      // Add the new staff member
       const response = await axios.post(`${API_BASE_URL}/mutation`, {
-        path: "staff:addStaffMember",
-        args: {
-          role: newStaff.role,
-          email: newStaff.email,
-        }
+        path: "bookings:createBooking",
+        args: newBooking
       });
 
       if (response.data) {
-        const addedStaff = response.data;
-        setStaffData([...staffData, addedStaff]);
-        setNewStaff({
-          role: "",
-          email: "",
+        const addedBooking = response.data;
+        setBookingsData([...bookingsData, addedBooking]);
+        setNewBooking({
+          customerId: '',
+          carId: '',
+          startDate: '',
+          endDate: '',
+          totalCost: 0,
+          paidAmount: 0,
+          status: '',
+          pickupLocation: '',
+          dropoffLocation: '',
+          customerInsurancetype: '',
+          customerInsuranceNumber: '',
         });
-        setIsAddingStaff(false);
-
-        // Send a welcome email using the API route
-        try {
-          await fetch('/api/sendEmail', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              to: addedStaff.email,
-              subject: 'Welcome to the Team!',
-              text: `Hello ${addedStaff.role},\n\nWelcome to the team! We're excited to have you on board.\n\nBest regards,\nYour Company`,
-              html: `<p>Hello <strong>${addedStaff.role}</strong>,</p><p>Welcome to the team! We're excited to have you on board.</p><p>Best regards,<br>Your Company</p>`,
-            }),
-          });
-          console.log('Welcome email sent successfully');
-        } catch (emailErr) {
-          console.error('Error sending welcome email:', emailErr);
-        }
+        setIsAddingBooking(false);
       }
     } catch (err) {
-      console.error('Error adding staff member:', err);
-      setError('Failed to add staff member. Please try again.');
+      console.error('Error adding booking:', err);
+      setError('Failed to add booking. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCopyStaff = (staff: StaffMember) => {
-    setNewStaff({
-      role: staff.role,
-      email: staff.email,
-    });
-    setIsAddingStaff(true);
   };
 
   const toggleRow = (id: string) => {
@@ -219,42 +196,126 @@ const StaffTable = () => {
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-xl font-semibold text-black dark:text-white">Staff Overview</h4>
-        <Sheet open={isAddingStaff} onOpenChange={setIsAddingStaff}>
+        <h4 className="text-xl font-semibold text-black dark:text-white">Bookings Overview</h4>
+        <Sheet open={isAddingBooking} onOpenChange={setIsAddingBooking}>
           <SheetTrigger asChild>
-            <Button variant="default" className="text-white">Add Staff</Button>
+            <Button variant="default" className="text-white">Add Booking</Button>
           </SheetTrigger>
           <SheetContent>
             <div className="h-full flex flex-col">
               <SheetHeader>
-                <SheetTitle>Add New Staff Member</SheetTitle>
+                <SheetTitle>Add New Booking</SheetTitle>
                 <SheetDescription>
-                  Enter the details of the new staff member below. Click &quot;Add&quot; to save.
+                  Enter the details of the new booking below. Click &quot;Add&quot; to save.
                 </SheetDescription>
               </SheetHeader>
-              <form onSubmit={handleAddStaffSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
+              <form onSubmit={handleAddBookingSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
                 <div>
-                  <label htmlFor="role" className="text-sm font-medium">Role</label>
+                  <label htmlFor="customerId" className="text-sm font-medium">Customer ID</label>
                   <Input
-                    id="role"
-                    name="role"
-                    value={newStaff.role}
+                    id="customerId"
+                    name="customerId"
+                    value={newBooking.customerId}
                     onChange={handleInputChange}
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="text-sm font-medium">Email</label>
+                  <label htmlFor="carId" className="text-sm font-medium">Car ID</label>
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={newStaff.email}
+                    id="carId"
+                    name="carId"
+                    value={newBooking.carId}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="startDate" className="text-sm font-medium">Start Date</label>
+                  <Input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={newBooking.startDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="endDate" className="text-sm font-medium">End Date</label>
+                  <Input
+                    id="endDate"
+                    name="endDate"
+                    type="date"
+                    value={newBooking.endDate}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="totalCost" className="text-sm font-medium">Total Cost</label>
+                  <Input
+                    id="totalCost"
+                    name="totalCost"
+                    type="number"
+                    value={newBooking.totalCost}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="paidAmount" className="text-sm font-medium">Paid Amount</label>
+                  <Input
+                    id="paidAmount"
+                    name="paidAmount"
+                    type="number"
+                    value={newBooking.paidAmount}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="status" className="text-sm font-medium">Status</label>
+                  <Input
+                    id="status"
+                    name="status"
+                    value={newBooking.status}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="pickupLocation" className="text-sm font-medium">Pickup Location</label>
+                  <Input
+                    id="pickupLocation"
+                    name="pickupLocation"
+                    value={newBooking.pickupLocation}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="dropoffLocation" className="text-sm font-medium">Dropoff Location</label>
+                  <Input
+                    id="dropoffLocation"
+                    name="dropoffLocation"
+                    value={newBooking.dropoffLocation}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="customerInsurancetype" className="text-sm font-medium">Insurance Type</label>
+                  <Input
+                    id="customerInsurancetype"
+                    name="customerInsurancetype"
+                    value={newBooking.customerInsurancetype}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="customerInsuranceNumber" className="text-sm font-medium">Insurance Number</label>
+                  <Input
+                    id="customerInsuranceNumber"
+                    name="customerInsuranceNumber"
+                    value={newBooking.customerInsuranceNumber}
                     onChange={handleInputChange}
                   />
                 </div>
                 <div className="mt-4">
                   <Button type="submit" className="text-white w-full">
-                    Add Staff Member
+                    Add Booking
                   </Button>
                 </div>
               </form>
@@ -272,71 +333,63 @@ const StaffTable = () => {
             <thead>
               <tr className="bg-gray-2 text-left dark:bg-meta-4">
                 <th className="py-4 px-4 font-medium text-black dark:text-white"></th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Name</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Role</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Email</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Customer ID</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Car ID</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Start Date</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">End Date</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Status</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {staffData.map((staff) => (
-                <React.Fragment key={staff._id}>
+              {bookingsData.map((booking) => (
+                <React.Fragment key={booking._id}>
                   <tr className="border-b border-stroke dark:border-strokedark">
                     <td className="py-3 px-4">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleRow(staff._id)}
+                        onClick={() => toggleRow(booking._id)}
                       >
-                        {expandedRows.has(staff._id) ? (
+                        {expandedRows.has(booking._id) ? (
                           <ChevronUp className="h-4 w-4" />
                         ) : (
                           <ChevronDown className="h-4 w-4" />
                         )}
                       </Button>
                     </td>
-                    <td className="py-3 px-4">
-                      {staff.user ? `${staff.user.firstName} ${staff.user.lastName}` : 'N/A'}
-                    </td>
-                    <td className="py-3 px-4">{staff.role}</td>
-                    <td className="py-3 px-4">{staff.email}</td>
+                    <td className="py-3 px-4">{booking.customerId}</td>
+                    <td className="py-3 px-4">{booking.carId}</td>
+                    <td className="py-3 px-4">{booking.startDate}</td>
+                    <td className="py-3 px-4">{booking.endDate}</td>
+                    <td className="py-3 px-4">{booking.status}</td>
                     <td className="py-3 px-4 flex space-x-2">
                       <Sheet>
                         <SheetTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(staff)}>Edit</Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(booking)}>Edit</Button>
                         </SheetTrigger>
                         <SheetContent>
                           <SheetHeader>
-                            <SheetTitle>Edit Staff Member</SheetTitle>
+                            <SheetTitle>Edit Booking</SheetTitle>
                             <SheetDescription>
-                              Make changes to the staff member details here. Click save when you&apos;re done.
+                              Make changes to the booking details here. Click save when you&apos;re done.
                             </SheetDescription>
                           </SheetHeader>
-                          {editingStaff && staff._id === editingStaff._id && (
+                          {editingBooking && booking._id === editingBooking._id && (
                             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                              {/* Add input fields for all booking properties */}
                               <div>
-                                <label htmlFor="role" className="text-sm font-medium">
-                                  Role
+                                <label htmlFor="customerId" className="text-sm font-medium">
+                                  Customer ID
                                 </label>
                                 <Input
-                                  id="role"
-                                  name="role"
-                                  value={editingStaff.role}
+                                  id="customerId"
+                                  name="customerId"
+                                  value={editingBooking.customerId}
                                   onChange={handleInputChange}
                                 />
                               </div>
-                              <div>
-                                <label htmlFor="email" className="text-sm font-medium">
-                                  Email
-                                </label>
-                                <Input
-                                  id="email"
-                                  name="email"
-                                  type="email"
-                                  value={editingStaff.email}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
+                              {/* Add more input fields for other booking properties */}
                               <div className="mt-4">
                                 <Button type="submit" className="text-white w-full">
                                   Save Changes
@@ -349,26 +402,25 @@ const StaffTable = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handleDelete(staff._id)}
+                        onClick={() => handleDelete(booking._id)}
                       >
                         Delete
                       </Button>
-                      <Link href={`/staff/${staff._id}`}>
+                      <Link href={`/bookings/${booking._id}`}>
                         <Button variant="link" size="sm">View</Button>
                       </Link>
-                      <Button variant="outline" size="sm" onClick={() => handleCopyStaff(staff)}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Clone
-                      </Button>
                     </td>
                   </tr>
-                  {expandedRows.has(staff._id) && (
+                  {expandedRows.has(booking._id) && (
                     <tr className="bg-gray-50 dark:bg-gray-800">
-                      <td colSpan={5} className="py-3 px-4">
-                        <div className="grid grid-cols-1 gap-4">
-                          <p><strong>Name:</strong> {staff.user ? `${staff.user.firstName} ${staff.user.lastName}` : 'N/A'}</p>
-                          <p><strong>Role:</strong> {staff.role}</p>
-                          <p><strong>Email:</strong> {staff.email}</p>
+                      <td colSpan={7} className="py-3 px-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <p><strong>Total Cost:</strong> ${booking.totalCost}</p>
+                          <p><strong>Paid Amount:</strong> ${booking.paidAmount}</p>
+                          <p><strong>Pickup Location:</strong> {booking.pickupLocation}</p>
+                          <p><strong>Dropoff Location:</strong> {booking.dropoffLocation}</p>
+                          <p><strong>Insurance Type:</strong> {booking.customerInsurancetype}</p>
+                          <p><strong>Insurance Number:</strong> {booking.customerInsuranceNumber}</p>
                         </div>
                       </td>
                     </tr>
@@ -383,4 +435,4 @@ const StaffTable = () => {
   );
 };
 
-export default StaffTable;
+export default BookingsTable;

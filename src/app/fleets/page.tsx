@@ -2,7 +2,8 @@
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
-import TableOne from "@/components/Tables/TableOne";
+import CarsTable from "@/components/Tables/carsTable";
+
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ const FleetsPage = () => {
 
       <div className="flex flex-col gap-10 h-full">
 
-        <TableOne />
+        <CarsTable />
 
       </div>
     </DefaultLayout>
