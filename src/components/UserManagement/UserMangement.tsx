@@ -5,7 +5,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
-import StaffTable from "../Tables/staff";
+import StaffTable from "../Tables/staffsTable";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
