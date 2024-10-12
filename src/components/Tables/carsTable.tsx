@@ -142,6 +142,8 @@ const TableOne = () => {
     setLoading(true);
     setError(null);
     try {
+
+      // request to the database API
       const response = await axios.post(`${API_BASE_URL}/query`, {
         path: "car:getAllCars",
         args: {},
