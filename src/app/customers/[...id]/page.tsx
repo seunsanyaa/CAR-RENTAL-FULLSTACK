@@ -1,28 +1,23 @@
-
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
-import VehicleManagement from "@/components/Vehicle/VehicleManagement";
+import CustomersTable from "@/components/Tables/customersTable";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Car rental",
-  description:
-    "Car rental",
+  title: "Customer Management",
+  description: "Customer management for car rental",
 };
 
-const FleetsPage = () => {
+const CustomersPage = () => {
   return (
     <DefaultLayout>
-      <Breadcrumb pageName="Toyota Fleet" />
+      <Breadcrumb pageName="Customer Management" />
 
       <div className="flex flex-col gap-10 h-full">
-<VehicleManagement/>
--
-
+        <CustomersTable />
       </div>
     </DefaultLayout>
   );
 };
 
-export default FleetsPage;
+export default CustomersPage;
