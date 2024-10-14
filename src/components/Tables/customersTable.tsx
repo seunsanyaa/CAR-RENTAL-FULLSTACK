@@ -130,7 +130,7 @@ const CustomersTable = () => {
           customers.map(async (customer: Customer) => {
             const userResponse = await axios.post(`${API_BASE_URL}/query`, {
               path: "users:getFullUser",
-              args: { id: customer.userId }
+              args: { userId: customer.userId }
             });
             return { ...customer, user: userResponse.data.value };
           })
@@ -237,7 +237,7 @@ const CustomersTable = () => {
   const handleCopyCustomer = (customer: Customer) => {
     setNewCustomer({
       ...customer,
-      userId: "", // Generate a new userId when copying
+      userId: "",
     });
     setIsAddingCustomer(true);
   };
