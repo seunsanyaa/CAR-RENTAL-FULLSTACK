@@ -255,6 +255,7 @@ const CustomersTable = () => {
           console.error('Error sending welcome email:', emailErr);
         }
       }
+    fetchCustomers();
     } catch (err) {
       console.error('Error adding customer:', err);
       setError('Failed to add customer. Please try again.');
