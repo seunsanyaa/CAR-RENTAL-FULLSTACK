@@ -97,13 +97,42 @@ const CustomersTable = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.post(`${API_BASE_URL}/mutation`, {
-          path: "customers:updateCustomer",
-          args: editingCustomer
+        // Update user details (name and email)
+        const userResponse = await axios.post(`${API_BASE_URL}/mutation`, {
+          path: "users:editUser",
+          args: {
+            userId: editingCustomer.userId,
+            email: editingCustomer.user?.email,
+            firstName: editingCustomer.user?.firstName,
+            lastName: editingCustomer.user?.lastName,
+          }
         });
-        if (response.data) {
+
+        // Update customer details
+        const customerResponse = await axios.post(`${API_BASE_URL}/mutation`, {
+          path: "customers:updateCustomer",
+          args: {
+            userId: editingCustomer.userId,
+            nationality: editingCustomer.nationality,
+            age: editingCustomer.age,
+            phoneNumber: editingCustomer.phoneNumber,
+            licenseNumber: editingCustomer.licenseNumber,
+            address: editingCustomer.address,
+            dateOfBirth: editingCustomer.dateOfBirth,
+          }
+        });
+
+        if (userResponse.data && customerResponse.data) {
           setCustomersData(customersData.map((customer) =>
-            customer.userId === editingCustomer.userId ? editingCustomer : customer
+            customer.userId === editingCustomer.userId ? {
+              ...editingCustomer,
+              user: {
+                ...editingCustomer.user,
+                email: editingCustomer.user?.email,
+                firstName: editingCustomer.user?.firstName,
+                lastName: editingCustomer.user?.lastName,
+              }
+            } : customer
           ));
           setEditingCustomer(null);
         }
@@ -234,10 +263,13 @@ const CustomersTable = () => {
     }
   };
 
-  const handleCopyCustomer = (customer: Customer) => {
+  const handleCopyCustomer = (customer: Customer & { user?: User }) => {
     setNewCustomer({
       ...customer,
-      userId: "",
+      userId: "", // Keep this empty as it should be a new ID
+      firstName: customer.user?.firstName || "",
+      lastName: customer.user?.lastName || "",
+      email: customer.user?.email || "",
     });
     setIsAddingCustomer(true);
   };
@@ -422,77 +454,116 @@ const CustomersTable = () => {
                           <Button variant="outline" size="sm" onClick={() => handleEdit(customer)}>Edit</Button>
                         </SheetTrigger>
                         <SheetContent>
-                          <SheetHeader>
-                            <SheetTitle>Edit Customer</SheetTitle>
-                            <SheetDescription>
-                              Make changes to the customer details here. Click save when you're done.
-                            </SheetDescription>
-                          </SheetHeader>
-                          {editingCustomer && customer.userId === editingCustomer.userId && (
-                            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                              <div>
-                                <label htmlFor="nationality" className="text-sm font-medium">Nationality</label>
-                                <Input
-                                  id="nationality"
-                                  name="nationality"
-                                  value={editingCustomer.nationality}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="age" className="text-sm font-medium">Age</label>
-                                <Input
-                                  id="age"
-                                  name="age"
-                                  type="number"
-                                  value={editingCustomer.age}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</label>
-                                <Input
-                                  id="phoneNumber"
-                                  name="phoneNumber"
-                                  value={editingCustomer.phoneNumber}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="licenseNumber" className="text-sm font-medium">License Number</label>
-                                <Input
-                                  id="licenseNumber"
-                                  name="licenseNumber"
-                                  value={editingCustomer.licenseNumber}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="address" className="text-sm font-medium">Address</label>
-                                <Input
-                                  id="address"
-                                  name="address"
-                                  value={editingCustomer.address}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth</label>
-                                <Input
-                                  id="dateOfBirth"
-                                  name="dateOfBirth"
-                                  type="date"
-                                  value={editingCustomer.dateOfBirth}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div className="mt-4">
-                                <Button type="submit" className="text-white w-full">
-                                  Save Changes
-                                </Button>
-                              </div>
-                            </form>
-                          )}
+                          <div className="h-full flex flex-col">
+                            <SheetHeader>
+                              <SheetTitle>Edit Customer</SheetTitle>
+                              <SheetDescription>
+                                Make changes to the customer details here. Click save when you're done.
+                              </SheetDescription>
+                            </SheetHeader>
+                            {editingCustomer && customer.userId === editingCustomer.userId && (
+                              <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
+                                <div>
+                                  <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
+                                  <Input
+                                    id="firstName"
+                                    name="firstName"
+                                    value={editingCustomer.user?.firstName || ''}
+                                    onChange={(e) => setEditingCustomer({
+                                      ...editingCustomer,
+                                      user: { ...editingCustomer.user, firstName: e.target.value }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
+                                  <Input
+                                    id="lastName"
+                                    name="lastName"
+                                    value={editingCustomer.user?.lastName || ''}
+                                    onChange={(e) => setEditingCustomer({
+                                      ...editingCustomer,
+                                      user: { ...editingCustomer.user, lastName: e.target.value }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="email" className="text-sm font-medium">Email</label>
+                                  <Input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    value={editingCustomer.user?.email || ''}
+                                    onChange={(e) => setEditingCustomer({
+                                      ...editingCustomer,
+                                      user: { ...editingCustomer.user, email: e.target.value }
+                                    })}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="nationality" className="text-sm font-medium">Nationality</label>
+                                  <Input
+                                    id="nationality"
+                                    name="nationality"
+                                    value={editingCustomer.nationality}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="age" className="text-sm font-medium">Age</label>
+                                  <Input
+                                    id="age"
+                                    name="age"
+                                    type="number"
+                                    value={editingCustomer.age}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</label>
+                                  <Input
+                                    id="phoneNumber"
+                                    name="phoneNumber"
+                                    value={editingCustomer.phoneNumber}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="licenseNumber" className="text-sm font-medium">License Number</label>
+                                  <Input
+                                    id="licenseNumber"
+                                    name="licenseNumber"
+                                    value={editingCustomer.licenseNumber}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="address" className="text-sm font-medium">Address</label>
+                                  <Input
+                                    id="address"
+                                    name="address"
+                                    value={editingCustomer.address}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth</label>
+                                  <Input
+                                    id="dateOfBirth"
+                                    name="dateOfBirth"
+                                    type="date"
+                                    value={editingCustomer.dateOfBirth}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div className="mt-4">
+                                  <Button type="submit" className="text-white w-full">
+                                    Save Changes
+                                  </Button>
+                                </div>
+                              </form>
+                            )}
+                          </div>
                         </SheetContent>
                       </Sheet>
                       <Button 
