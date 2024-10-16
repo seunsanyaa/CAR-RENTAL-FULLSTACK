@@ -33,6 +33,7 @@ const CarsTable = () => {
     disabled: false,
     registrationNumber: "",
     pictures: [] as string[],
+    pricePerDay: 0, // Add price per day to newCar state
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +73,11 @@ const CarsTable = () => {
         ...prev,
         pictures: value.split(',').map(url => url.trim()),
       }));
+    } else if (name === "pricePerDay") {
+      setNewCar((prev) => ({
+        ...prev,
+        pricePerDay: parseFloat(value), // Handle price per day input
+      }));
     } else {
       setNewCar((prev) => ({
         ...prev,
@@ -92,6 +98,8 @@ const CarsTable = () => {
               [name]:
                 name === "pictures"
                   ? value.split(',').map(url => url.trim())
+                  : name === "pricePerDay"
+                  ? parseFloat(value) // Handle price per day input for editing
                   : type === "checkbox"
                   ? checked
                   : name === "year"
@@ -121,6 +129,7 @@ const CarsTable = () => {
             year: editingCar.year,
             disabled: editingCar.disabled,
             pictures: editingCar.pictures,
+            pricePerDay: editingCar.pricePerDay, // Include price per day in the update
           }
         });
         if (response.data) {
@@ -181,6 +190,7 @@ const CarsTable = () => {
           year: newCar.year,
           registrationNumber: newCar.registrationNumber,
           pictures: newCar.pictures,
+          pricePerDay: newCar.pricePerDay, // Include price per day in the request
         }
       });
       if (response.data) {
@@ -195,6 +205,7 @@ const CarsTable = () => {
           disabled: false,
           registrationNumber: "",
           pictures: [],
+          pricePerDay: 0, // Reset price per day after adding a new car
         });
         setIsAddingCar(false);
       }
@@ -211,6 +222,7 @@ const CarsTable = () => {
       ...car,
       registrationNumber: '', // Clear the registration number as it should be unique
       pictures: [...car.pictures], // Include the pictures array
+      pricePerDay: 0, // Reset price per day as it should be unique
     });
     setIsAddingCar(true);
   };
@@ -319,6 +331,16 @@ const CarsTable = () => {
                     onChange={handleInputChange}
                   />
                 </div>
+                <div>
+                  <label htmlFor="pricePerDay" className="text-sm font-medium">Price per Day</label>
+                  <Input
+                    id="pricePerDay"
+                    name="pricePerDay"
+                    type="number"
+                    value={newCar.pricePerDay}
+                    onChange={handleInputChange}
+                  />
+                </div>
                 <div className="mt-4">
                   <Button type="submit" className="text-white w-full">
                     Add Car
@@ -343,6 +365,7 @@ const CarsTable = () => {
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Model</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Maker</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Reg. Number</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Price per Day</th> {/* Added Price per Day header */}
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
             </thead>
@@ -384,6 +407,7 @@ const CarsTable = () => {
                     <td className="py-3 px-4">{car.model}</td>
                     <td className="py-3 px-4">{car.maker}</td>
                     <td className="py-3 px-4">{car.registrationNumber}</td>
+                    <td className="py-3 px-4">{car.pricePerDay}</td> {/* Display price per day */}
                     <td className="py-3 px-4 flex space-x-2">
                       <Sheet>
                         <SheetTrigger asChild>
@@ -489,6 +513,16 @@ const CarsTable = () => {
                                   value={editingCar.registrationNumber}
                                   onChange={handleInputChange}
                                   disabled // Assuming registration number shouldn't be editable
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="pricePerDay" className="text-sm font-medium">Price per Day</label>
+                                <Input
+                                  id="pricePerDay"
+                                  name="pricePerDay"
+                                  type="number"
+                                  value={editingCar.pricePerDay}
+                                  onChange={handleInputChange}
                                 />
                               </div>
                               <div className="mt-4">
