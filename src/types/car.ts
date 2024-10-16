@@ -8,4 +8,5 @@ export interface Car {
   disabled: boolean;
   registrationNumber: string;
   pictures: string[];
+  pricePerDay: number;
 }

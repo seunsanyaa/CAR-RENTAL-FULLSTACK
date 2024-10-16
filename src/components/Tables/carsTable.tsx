@@ -38,6 +38,7 @@ const CarsTable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [isEditingCar, setIsEditingCar] = useState(false);
 
   const handleDelete = async (registrationNumber: string) => {
     setLoading(true);
@@ -60,6 +61,7 @@ const CarsTable = () => {
 
   const handleEdit = (car: Car) => {
     setEditingCar({ ...car });
+    setIsEditingCar(true);
   };
 
   const handleInputChange = (
@@ -137,6 +139,7 @@ const CarsTable = () => {
             car.registrationNumber === editingCar.registrationNumber ? editingCar : car
           ));
           setEditingCar(null);
+          setIsEditingCar(false); // Close the sheet after successful update
         }
       } catch (err) {
         console.error('Error updating car:', err);
@@ -409,129 +412,115 @@ const CarsTable = () => {
                     <td className="py-3 px-4">{car.registrationNumber}</td>
                     <td className="py-3 px-4">{car.pricePerDay}</td> {/* Display price per day */}
                     <td className="py-3 px-4 flex space-x-2">
-                      <Sheet>
+                      <Sheet open={isEditingCar} onOpenChange={setIsEditingCar}>
                         <SheetTrigger asChild>
                           <Button variant="outline" size="sm" onClick={() => handleEdit(car)}>Edit</Button>
                         </SheetTrigger>
-                        <SheetContent>
-                          <SheetHeader>
-                            <SheetTitle>Edit Car</SheetTitle>
-                            <SheetDescription>
-                              Make changes to the car details here. Click save when you&apos;re done.
-                            </SheetDescription>
-                          </SheetHeader>
-                          {editingCar && car.registrationNumber === editingCar.registrationNumber && (
-                            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                              <div>
-                                <label htmlFor="model" className="text-sm font-medium">
-                                  Model
-                                </label>
-                                <Input
-                                  id="model"
-                                  name="model"
-                                  value={editingCar.model}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="color" className="text-sm font-medium">
-                                  Color
-                                </label>
-                                <Input
-                                  id="color"
-                                  name="color"
-                                  value={editingCar.color}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="maker" className="text-sm font-medium">
-                                  Maker
-                                </label>
-                                <Input
-                                  id="maker"
-                                  name="maker"
-                                  value={editingCar.maker}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="lastMaintenanceDate" className="text-sm font-medium">
-                                  Last Maintenance Date
-                                </label>
-                                <Input
-                                  id="lastMaintenanceDate"
-                                  name="lastMaintenanceDate"
-                                  type="date"
-                                  value={editingCar.lastMaintenanceDate}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div className="flex items-center">
-                                <label htmlFor="available" className="text-sm font-medium mr-2">
-                                  Available
-                                </label>
-                                <input
-                                  id="available"
-                                  name="available"
-                                  type="checkbox"
-                                  checked={editingCar.available}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="year" className="text-sm font-medium">
-                                  Year
-                                </label>
-                                <Input
-                                  id="year"
-                                  name="year"
-                                  type="number"
-                                  value={editingCar.year}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div className="flex items-center">
-                                <label htmlFor="disabled" className="text-sm font-medium mr-2">
-                                  Disabled
-                                </label>
-                                <input
-                                  id="disabled"
-                                  name="disabled"
-                                  type="checkbox"
-                                  checked={editingCar.disabled}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="registrationNumber" className="text-sm font-medium">
-                                  Registration Number
-                                </label>
-                                <Input
-                                  id="registrationNumber"
-                                  name="registrationNumber"
-                                  value={editingCar.registrationNumber}
-                                  onChange={handleInputChange}
-                                  disabled // Assuming registration number shouldn't be editable
-                                />
-                              </div>
-                              <div>
-                                <label htmlFor="pricePerDay" className="text-sm font-medium">Price per Day</label>
-                                <Input
-                                  id="pricePerDay"
-                                  name="pricePerDay"
-                                  type="number"
-                                  value={editingCar.pricePerDay}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div className="mt-4">
-                                <Button type="submit" className="text-white w-full">
-                                  Save Changes
-                                </Button>
-                              </div>
-                            </form>
-                          )}
+                        <SheetContent className="overflow-y-auto">
+                          <div className="h-full flex flex-col">
+                            <SheetHeader>
+                              <SheetTitle>Edit Car</SheetTitle>
+                              <SheetDescription>
+                                Make changes to the car details below. Click "Save" when you're done.
+                              </SheetDescription>
+                            </SheetHeader>
+                            {editingCar && (
+                              <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
+                                <div>
+                                  <label htmlFor="model" className="text-sm font-medium">Model</label>
+                                  <Input
+                                    id="model"
+                                    name="model"
+                                    value={editingCar.model}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="color" className="text-sm font-medium">Color</label>
+                                  <Input
+                                    id="color"
+                                    name="color"
+                                    value={editingCar.color}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                {/* Add other fields similar to the add car form */}
+                                <div>
+                                  <label htmlFor="maker" className="text-sm font-medium">Maker</label>
+                                  <Input
+                                    id="maker"
+                                    name="maker"
+                                    value={editingCar.maker}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="lastMaintenanceDate" className="text-sm font-medium">Last Maintenance Date</label>
+                                  <Input
+                                    id="lastMaintenanceDate"
+                                    name="lastMaintenanceDate"
+                                    type="date"
+                                    value={editingCar.lastMaintenanceDate}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div className="flex items-center">
+                                  <label htmlFor="available" className="text-sm font-medium mr-2">Available</label>
+                                  <input
+                                    id="available"
+                                    name="available"
+                                    type="checkbox"
+                                    checked={editingCar.available}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="year" className="text-sm font-medium">Year</label>
+                                  <Input
+                                    id="year"
+                                    name="year"
+                                    type="number"
+                                    value={editingCar.year}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="registrationNumber" className="text-sm font-medium">Registration Number</label>
+                                  <Input
+                                    id="registrationNumber"
+                                    name="registrationNumber"
+                                    value={editingCar.registrationNumber}
+                                    onChange={handleInputChange}
+                                    disabled
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="pictures" className="text-sm font-medium">Picture URLs (comma-separated)</label>
+                                  <Input
+                                    id="pictures"
+                                    name="pictures"
+                                    value={editingCar.pictures.join(', ')}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div>
+                                  <label htmlFor="pricePerDay" className="text-sm font-medium">Price per Day</label>
+                                  <Input
+                                    id="pricePerDay"
+                                    name="pricePerDay"
+                                    type="number"
+                                    value={editingCar.pricePerDay}
+                                    onChange={handleInputChange}
+                                  />
+                                </div>
+                                <div className="mt-4">
+                                  <Button type="submit" className="text-white w-full">
+                                    Save Changes
+                                  </Button>
+                                </div>
+                              </form>
+                            )}
+                          </div>
                         </SheetContent>
                       </Sheet>
                       <Button 
