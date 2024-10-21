@@ -17,7 +17,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 
-const API_BASE_URL = 'https://third-elk-244.convex.cloud/api';
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
 const CustomersTable = () => {
   const [customersData, setCustomersData] = useState<(Customer & { user?: User })[]>([]);

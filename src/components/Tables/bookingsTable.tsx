@@ -16,7 +16,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 
-const API_BASE_URL = 'https://third-elk-244.convex.cloud/api';
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
 // Add this type definition at the top of the file
 type Booking = {
@@ -78,22 +78,12 @@ const BookingsTable = () => {
     setEditingBooking({ ...booking });
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const newValue = name === 'totalCost' || name === 'paidAmount' ? parseFloat(value) : value;
-
-    setNewBooking((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
-
-    if (editingBooking) {
-      setEditingBooking((prev) =>
-        prev ? { ...prev, [name]: newValue } : null
-      );
-    }
+    setEditingBooking((prev) => {
+      if (!prev) return null;
+      return { ...prev, [name]: name === 'price' || name === 'sold' ? parseFloat(value) : value };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -104,7 +94,7 @@ const BookingsTable = () => {
       try {
         const response = await axios.post(`${API_BASE_URL}/mutation`, {
           path: "bookings:updateBooking",
-          args: editingBooking
+          args: { ...editingBooking }
         });
         if (response.data) {
           setBookingsData(bookingsData.map((booking) =>
@@ -127,11 +117,12 @@ const BookingsTable = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/query`, {
         path: "bookings:getAllBookings",
-        args: {}
+        args: {},
+        format: "json" 
       });
       if (response.data) {
-        const bookings = response.data.value;
-        setBookingsData(bookings);
+        console.log(response.data);
+        setBookingsData(response.data.value);
       }
     } catch (err) {
       console.error('Error fetching bookings:', err);
@@ -143,7 +134,7 @@ const BookingsTable = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [newBooking]);
 
   const handleAddBookingSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -152,12 +143,10 @@ const BookingsTable = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/mutation`, {
         path: "bookings:createBooking",
-        args: newBooking
+        args: { ...newBooking }
       });
-
       if (response.data) {
-        const addedBooking = response.data;
-        setBookingsData([...bookingsData, addedBooking]);
+        setBookingsData([...bookingsData, response.data]);
         setNewBooking({
           customerId: '',
           carId: '',
@@ -179,6 +168,24 @@ const BookingsTable = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyBooking = (booking: Booking & { user?: User }) => {
+    setNewBooking({
+      ...booking,
+      customerId: '',
+      carId: '',
+      startDate: '',
+      endDate: '',
+      totalCost: 0,
+      paidAmount: 0,
+      status: '',
+      pickupLocation: '',
+      dropoffLocation: '',
+      customerInsurancetype: '',
+      customerInsuranceNumber: '',
+    });
+    setIsAddingBooking(true);
   };
 
   const toggleRow = (id: string) => {
@@ -216,7 +223,7 @@ const BookingsTable = () => {
                     id="customerId"
                     name="customerId"
                     value={newBooking.customerId}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, customerId: e.target.value })}
                   />
                 </div>
                 <div>
@@ -225,7 +232,7 @@ const BookingsTable = () => {
                     id="carId"
                     name="carId"
                     value={newBooking.carId}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, carId: e.target.value })}
                   />
                 </div>
                 <div>
@@ -235,7 +242,7 @@ const BookingsTable = () => {
                     name="startDate"
                     type="date"
                     value={newBooking.startDate}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, startDate: e.target.value })}
                   />
                 </div>
                 <div>
@@ -245,7 +252,7 @@ const BookingsTable = () => {
                     name="endDate"
                     type="date"
                     value={newBooking.endDate}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, endDate: e.target.value })}
                   />
                 </div>
                 <div>
@@ -255,7 +262,7 @@ const BookingsTable = () => {
                     name="totalCost"
                     type="number"
                     value={newBooking.totalCost}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, totalCost: parseFloat(e.target.value) })}
                   />
                 </div>
                 <div>
@@ -265,7 +272,7 @@ const BookingsTable = () => {
                     name="paidAmount"
                     type="number"
                     value={newBooking.paidAmount}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, paidAmount: parseFloat(e.target.value) })}
                   />
                 </div>
                 <div>
@@ -274,7 +281,7 @@ const BookingsTable = () => {
                     id="status"
                     name="status"
                     value={newBooking.status}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, status: e.target.value })}
                   />
                 </div>
                 <div>
@@ -283,7 +290,7 @@ const BookingsTable = () => {
                     id="pickupLocation"
                     name="pickupLocation"
                     value={newBooking.pickupLocation}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, pickupLocation: e.target.value })}
                   />
                 </div>
                 <div>
@@ -292,25 +299,25 @@ const BookingsTable = () => {
                     id="dropoffLocation"
                     name="dropoffLocation"
                     value={newBooking.dropoffLocation}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, dropoffLocation: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label htmlFor="customerInsurancetype" className="text-sm font-medium">Insurance Type</label>
+                  <label htmlFor="customerInsurancetype" className="text-sm font-medium">Customer Insurance Type</label>
                   <Input
                     id="customerInsurancetype"
                     name="customerInsurancetype"
                     value={newBooking.customerInsurancetype}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, customerInsurancetype: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label htmlFor="customerInsuranceNumber" className="text-sm font-medium">Insurance Number</label>
+                  <label htmlFor="customerInsuranceNumber" className="text-sm font-medium">Customer Insurance Number</label>
                   <Input
                     id="customerInsuranceNumber"
                     name="customerInsuranceNumber"
                     value={newBooking.customerInsuranceNumber}
-                    onChange={handleInputChange}
+                    onChange={(e) => setNewBooking({ ...newBooking, customerInsuranceNumber: e.target.value })}
                   />
                 </div>
                 <div className="mt-4">
@@ -372,7 +379,7 @@ const BookingsTable = () => {
                           <SheetHeader>
                             <SheetTitle>Edit Booking</SheetTitle>
                             <SheetDescription>
-                              Make changes to the booking details here. Click save when you&apos;re done.
+                              Make changes to the booking details here. Click save when you're done.
                             </SheetDescription>
                           </SheetHeader>
                           {editingBooking && booking._id === editingBooking._id && (
@@ -389,7 +396,96 @@ const BookingsTable = () => {
                                   onChange={handleInputChange}
                                 />
                               </div>
-                              {/* Add more input fields for other booking properties */}
+                              <div>
+                                <label htmlFor="carId" className="text-sm font-medium">
+                                  Car ID
+                                </label>
+                                <Input
+                                  id="carId"
+                                  name="carId"
+                                  value={editingBooking.carId}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="startDate" className="text-sm font-medium">
+                                  Start Date
+                                </label>
+                                <Input
+                                  id="startDate"
+                                  name="startDate"
+                                  type="date"
+                                  value={editingBooking.startDate}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="endDate" className="text-sm font-medium">
+                                  End Date
+                                </label>
+                                <Input
+                                  id="endDate"
+                                  name="endDate"
+                                  type="date"
+                                  value={editingBooking.endDate}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="status" className="text-sm font-medium">
+                                  Status
+                                </label>
+                                <Input
+                                  id="status"
+                                  name="status"
+                                  value={editingBooking.status}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="pickupLocation" className="text-sm font-medium">
+                                  Pickup Location
+                                </label>
+                                <Input
+                                  id="pickupLocation"
+                                  name="pickupLocation"
+                                  value={editingBooking.pickupLocation}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="dropoffLocation" className="text-sm font-medium">
+                                  Dropoff Location
+                                </label>
+                                <Input
+                                  id="dropoffLocation"
+                                  name="dropoffLocation"
+                                  value={editingBooking.dropoffLocation}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="customerInsurancetype" className="text-sm font-medium">
+                                  Customer Insurance Type
+                                </label>
+                                <Input
+                                  id="customerInsurancetype"
+                                  name="customerInsurancetype"
+                                  value={editingBooking.customerInsurancetype}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="customerInsuranceNumber" className="text-sm font-medium">
+                                  Customer Insurance Number
+                                </label>
+                                <Input
+                                  id="customerInsuranceNumber"
+                                  name="customerInsuranceNumber"
+                                  value={editingBooking.customerInsuranceNumber}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
                               <div className="mt-4">
                                 <Button type="submit" className="text-white w-full">
                                   Save Changes
