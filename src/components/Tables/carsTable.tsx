@@ -18,6 +18,7 @@ import {
 import Image from 'next/image';
 
 const API_BASE_URL = 'https://third-elk-244.convex.cloud/api';
+const CAR_QUERY_API_BASE = 'https://www.carqueryapi.com/api/0.3/';
 
 const CarsTable = () => {
   const [carData, setCarData] = useState<Car[]>([]);
@@ -27,18 +28,91 @@ const CarsTable = () => {
     model: "",
     color: "",
     maker: "",
+    trim: "",
     lastMaintenanceDate: "",
     available: false,
     year: 0,
     disabled: false,
     registrationNumber: "",
     pictures: [] as string[],
-    pricePerDay: 0, // Add price per day to newCar state
+    pricePerDay: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isEditingCar, setIsEditingCar] = useState(false);
+
+  // State variables for dynamic dropdowns
+  const [availableMakes, setAvailableMakes] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableTrims, setAvailableTrims] = useState<string[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [fetchingOptions, setFetchingOptions] = useState(false);
+
+  // Fetch available makes on component mount
+  useEffect(() => {
+    const fetchMakes = async () => {
+      try {
+        const response = await axios.get(`${CAR_QUERY_API_BASE}?cmd=getMakes&callback=`);
+        console.log('Makes Response:', response.data); // Debugging
+        const makes = response.data.Makes.map((make: any) => make.make_display);
+        setAvailableMakes(makes);
+      } catch (err) {
+        console.error('Error fetching makes:', err);
+        setError('Failed to fetch makes. Please try again later.');
+      }
+    };
+    fetchMakes();
+  }, []);
+
+  // Fetch models when maker changes
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (newCar.maker.trim() === "") {
+        setAvailableModels([]);
+        return;
+      }
+      try {
+        const response = await axios.get(`${CAR_QUERY_API_BASE}?cmd=getModels&make=${encodeURIComponent(newCar.maker)}&callback=`);
+        console.log('Models Response:', response.data); // Debugging
+        const models = response.data.Models.map((model: any) => model.model_name);
+        setAvailableModels(models);
+      } catch (err) {
+        console.error('Error fetching models:', err);
+        setError('Failed to fetch models. Please try again later.');
+      }
+    };
+    fetchModels();
+  }, [newCar.maker]);
+
+  // Fetch trims and years when model changes
+  useEffect(() => {
+    const fetchTrimsAndYears = async () => {
+      if (newCar.maker.trim() === "" || newCar.model.trim() === "") {
+        setAvailableTrims([]);
+        setAvailableYears([]);
+        return;
+      }
+      setFetchingOptions(true);
+      try {
+        const response = await axios.get(`${CAR_QUERY_API_BASE}?cmd=getTrims&make=${encodeURIComponent(newCar.maker)}&model=${encodeURIComponent(newCar.model)}&callback=`);
+        console.log('Trims and Years Response:', response.data); // Debugging
+        const trims = response.data.Trims.map((trim: any) => trim.model_trim).filter((trim: string) => trim);
+        const years = response.data.Trims.map((trim: any) => parseInt(trim.model_year)).filter((year: number) => !isNaN(year));
+        // Remove duplicates
+        const uniqueTrims = Array.from(new Set(trims));
+        const uniqueYears = Array.from(new Set(years)).sort((a, b) => b - a);
+        setAvailableTrims(uniqueTrims);
+        setAvailableYears(uniqueYears);
+      } catch (err) {
+        console.error('Error fetching trims and years:', err);
+        setError('Failed to fetch trims and years. Please try again later.');
+      } finally {
+        setFetchingOptions(false);
+      }
+    };
+    fetchTrimsAndYears();
+  }, [newCar.maker, newCar.model]);
 
   const handleDelete = async (registrationNumber: string) => {
     setLoading(true);
@@ -65,7 +139,7 @@ const CarsTable = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
     const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : false;
@@ -78,7 +152,17 @@ const CarsTable = () => {
     } else if (name === "pricePerDay") {
       setNewCar((prev) => ({
         ...prev,
-        pricePerDay: parseFloat(value), // Handle price per day input
+        pricePerDay: parseFloat(value) || 0,
+      }));
+    } else if (name === "year") {
+      setNewCar((prev) => ({
+        ...prev,
+        year: parseInt(value) || 0,
+      }));
+    } else if (name === "trim") {
+      setNewCar((prev) => ({
+        ...prev,
+        trim: value,
       }));
     } else {
       setNewCar((prev) => ({
@@ -87,7 +171,7 @@ const CarsTable = () => {
           type === "checkbox"
             ? checked
             : name === "year"
-            ? parseInt(value)
+            ? parseInt(value) || 0
             : value,
       }));
     }
@@ -101,11 +185,11 @@ const CarsTable = () => {
                 name === "pictures"
                   ? value.split(',').map(url => url.trim())
                   : name === "pricePerDay"
-                  ? parseFloat(value) // Handle price per day input for editing
+                  ? parseFloat(value) || 0
                   : type === "checkbox"
                   ? checked
                   : name === "year"
-                  ? parseInt(value)
+                  ? parseInt(value) || 0
                   : value,
             }
           : null
@@ -126,12 +210,13 @@ const CarsTable = () => {
             model: editingCar.model,
             color: editingCar.color,
             maker: editingCar.maker,
+            trim: editingCar.trim, // Include trim in the update
             lastMaintenanceDate: editingCar.lastMaintenanceDate,
             available: editingCar.available,
             year: editingCar.year,
             disabled: editingCar.disabled,
             pictures: editingCar.pictures,
-            pricePerDay: editingCar.pricePerDay, // Include price per day in the update
+            pricePerDay: editingCar.pricePerDay,
           }
         });
         if (response.data) {
@@ -139,7 +224,7 @@ const CarsTable = () => {
             car.registrationNumber === editingCar.registrationNumber ? editingCar : car
           ));
           setEditingCar(null);
-          setIsEditingCar(false); // Close the sheet after successful update
+          setIsEditingCar(false);
         }
       } catch (err) {
         console.error('Error updating car:', err);
@@ -154,15 +239,13 @@ const CarsTable = () => {
     setLoading(true);
     setError(null);
     try {
-
-      // request to the database API
       const response = await axios.post(`${API_BASE_URL}/query`, {
         path: "car:getAllCars",
         args: {},
         format: "json" 
       });
       if (response.data) {
-        console.log(response.data);
+        console.log('Fetch Cars Response:', response.data); // Debugging
         setCarData(response.data.value);
       }
     } catch (err) {
@@ -188,12 +271,13 @@ const CarsTable = () => {
           model: newCar.model,
           color: newCar.color,
           maker: newCar.maker,
+          trim: newCar.trim, // Include trim in the creation
           lastMaintenanceDate: newCar.lastMaintenanceDate,
           available: newCar.available,
           year: newCar.year,
           registrationNumber: newCar.registrationNumber,
           pictures: newCar.pictures,
-          pricePerDay: newCar.pricePerDay, // Include price per day in the request
+          pricePerDay: newCar.pricePerDay,
         }
       });
       if (response.data) {
@@ -202,13 +286,14 @@ const CarsTable = () => {
           model: "",
           color: "",
           maker: "",
+          trim: "",
           lastMaintenanceDate: "",
           available: false,
           year: 0,
           disabled: false,
           registrationNumber: "",
           pictures: [],
-          pricePerDay: 0, // Reset price per day after adding a new car
+          pricePerDay: 0,
         });
         setIsAddingCar(false);
       }
@@ -223,9 +308,10 @@ const CarsTable = () => {
   const handleCopyCar = (car: Car) => {
     setNewCar({
       ...car,
-      registrationNumber: '', // Clear the registration number as it should be unique
-      pictures: [...car.pictures], // Include the pictures array
-      pricePerDay: 0, // Reset price per day as it should be unique
+      registrationNumber: '',
+      trim: "",
+      pictures: [...car.pictures],
+      pricePerDay: 0,
     });
     setIsAddingCar(true);
   };
@@ -260,13 +346,64 @@ const CarsTable = () => {
               </SheetHeader>
               <form onSubmit={handleAddCarSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
                 <div>
+                  <label htmlFor="maker" className="text-sm font-medium">Maker</label>
+                  <select
+                    id="maker"
+                    name="maker"
+                    value={newCar.maker}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded p-2"
+                  >
+                    <option value="">Select Maker</option>
+                    {availableMakes.map((make) => (
+                      <option key={make} value={make}>{make}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label htmlFor="model" className="text-sm font-medium">Model</label>
-                  <Input
+                  <select
                     id="model"
                     name="model"
                     value={newCar.model}
                     onChange={handleInputChange}
-                  />
+                    className="w-full border border-gray-300 rounded p-2"
+                  >
+                    <option value="">Select Model</option>
+                    {availableModels.map((model) => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="trim" className="text-sm font-medium">Trim</label>
+                  <select
+                    id="trim"
+                    name="trim"
+                    value={newCar.trim}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded p-2"
+                  >
+                    <option value="">Select Trim</option>
+                    {availableTrims.map((trim) => (
+                      <option key={trim} value={trim}>{trim}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="year" className="text-sm font-medium">Year</label>
+                  <select
+                    id="year"
+                    name="year"
+                    value={newCar.year}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded p-2"
+                  >
+                    <option value={0}>Select Year</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label htmlFor="color" className="text-sm font-medium">Color</label>
@@ -274,15 +411,6 @@ const CarsTable = () => {
                     id="color"
                     name="color"
                     value={newCar.color}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="maker" className="text-sm font-medium">Maker</label>
-                  <Input
-                    id="maker"
-                    name="maker"
-                    value={newCar.maker}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -303,16 +431,6 @@ const CarsTable = () => {
                     name="available"
                     type="checkbox"
                     checked={newCar.available}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="year" className="text-sm font-medium">Year</label>
-                  <Input
-                    id="year"
-                    name="year"
-                    type="number"
-                    value={newCar.year}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -367,8 +485,9 @@ const CarsTable = () => {
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Image</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Model</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Maker</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Reg. Number</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Price per Day</th> {/* Added Price per Day header */}
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Trim</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Year</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Price per Day</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
             </thead>
@@ -409,8 +528,9 @@ const CarsTable = () => {
                     </td>
                     <td className="py-3 px-4">{car.model}</td>
                     <td className="py-3 px-4">{car.maker}</td>
-                    <td className="py-3 px-4">{car.registrationNumber}</td>
-                    <td className="py-3 px-4">{car.pricePerDay}</td> {/* Display price per day */}
+                    <td className="py-3 px-4">{car.trim}</td>
+                    <td className="py-3 px-4">{car.year}</td>
+                    <td className="py-3 px-4">{car.pricePerDay}</td>
                     <td className="py-3 px-4 flex space-x-2">
                       <Sheet open={isEditingCar} onOpenChange={setIsEditingCar}>
                         <SheetTrigger asChild>
@@ -427,13 +547,64 @@ const CarsTable = () => {
                             {editingCar && (
                               <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
                                 <div>
+                                  <label htmlFor="maker" className="text-sm font-medium">Maker</label>
+                                  <select
+                                    id="maker"
+                                    name="maker"
+                                    value={editingCar.maker}
+                                    onChange={handleInputChange}
+                                    className="w-full border border-gray-300 rounded p-2"
+                                  >
+                                    <option value="">Select Maker</option>
+                                    {availableMakes.map((make) => (
+                                      <option key={make} value={make}>{make}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
                                   <label htmlFor="model" className="text-sm font-medium">Model</label>
-                                  <Input
+                                  <select
                                     id="model"
                                     name="model"
                                     value={editingCar.model}
                                     onChange={handleInputChange}
-                                  />
+                                    className="w-full border border-gray-300 rounded p-2"
+                                  >
+                                    <option value="">Select Model</option>
+                                    {availableModels.map((model) => (
+                                      <option key={model} value={model}>{model}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label htmlFor="trim" className="text-sm font-medium">Trim</label>
+                                  <select
+                                    id="trim"
+                                    name="trim"
+                                    value={editingCar.trim}
+                                    onChange={handleInputChange}
+                                    className="w-full border border-gray-300 rounded p-2"
+                                  >
+                                    <option value="">Select Trim</option>
+                                    {availableTrims.map((trim) => (
+                                      <option key={trim} value={trim}>{trim}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label htmlFor="year" className="text-sm font-medium">Year</label>
+                                  <select
+                                    id="year"
+                                    name="year"
+                                    value={editingCar.year}
+                                    onChange={handleInputChange}
+                                    className="w-full border border-gray-300 rounded p-2"
+                                  >
+                                    <option value={0}>Select Year</option>
+                                    {availableYears.map((year) => (
+                                      <option key={year} value={year}>{year}</option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div>
                                   <label htmlFor="color" className="text-sm font-medium">Color</label>
@@ -441,16 +612,6 @@ const CarsTable = () => {
                                     id="color"
                                     name="color"
                                     value={editingCar.color}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                {/* Add other fields similar to the add car form */}
-                                <div>
-                                  <label htmlFor="maker" className="text-sm font-medium">Maker</label>
-                                  <Input
-                                    id="maker"
-                                    name="maker"
-                                    value={editingCar.maker}
                                     onChange={handleInputChange}
                                   />
                                 </div>
@@ -471,16 +632,6 @@ const CarsTable = () => {
                                     name="available"
                                     type="checkbox"
                                     checked={editingCar.available}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="year" className="text-sm font-medium">Year</label>
-                                  <Input
-                                    id="year"
-                                    name="year"
-                                    type="number"
-                                    value={editingCar.year}
                                     onChange={handleInputChange}
                                   />
                                 </div>
@@ -541,7 +692,7 @@ const CarsTable = () => {
                   </tr>
                   {expandedRows.has(car.registrationNumber) && (
                     <tr className="bg-gray-50 dark:bg-gray-800">
-                      <td colSpan={6} className="py-3 px-4">
+                      <td colSpan={8} className="py-3 px-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p><strong>Color:</strong> {car.color}</p>
@@ -551,6 +702,7 @@ const CarsTable = () => {
                           <div>
                             <p><strong>Available:</strong> {car.available ? "Yes" : "No"}</p>
                             <p><strong>Disabled:</strong> {car.disabled ? "Yes" : "No"}</p>
+                            <p><strong>Trim:</strong> {car.trim}</p>
                           </div>
                         </div>
                       </td>
