@@ -27,7 +27,7 @@ const CarsTable = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isEditingCar, setIsEditingCar] = useState(false);
-
+  
   const handleDelete = async (registrationNumber: string) => {
     setLoading(true);
     setError(null);
@@ -37,7 +37,7 @@ const CarsTable = () => {
         args: { registrationNumber }
       });
       if (response.data) {
-        setCarData(carData.filter((car) => car.registrationNumber !== registrationNumber));
+        fetchCars(); // Fetch all cars again after successful deletion
       }
     } catch (err) {
       console.error('Error deleting car:', err);
@@ -101,11 +101,7 @@ const CarsTable = () => {
           }
         });
         if (response.data) {
-          setCarData(
-            carData.map((car) =>
-              car.registrationNumber === editingCar.registrationNumber ? editingCar : car
-            )
-          );
+          fetchCars(); // Fetch all cars again after successful update
           setEditingCar(null);
           setIsEditingCar(false);
         }
@@ -141,9 +137,7 @@ const CarsTable = () => {
 
   useEffect(() => {
     fetchCars();
-    // Removed dependency on newCar as it's now handled by CarAdd
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // This will fetch cars when the component mounts
 
   const handleCopyCar = (car: Car) => {
     // Logic to handle copying a car can remain here or be moved to CarAdd if desired
@@ -164,7 +158,7 @@ const CarsTable = () => {
   };
 
   const handleCarAdded = (car: Car) => {
-    setCarData([...carData, car]);
+    fetchCars(); // Fetch all cars again when a new car is added
   };
 
   return (
