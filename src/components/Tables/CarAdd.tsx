@@ -171,6 +171,16 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
           pricePerDay: newCar.pricePerDay,
         },
       });
+      const response2 = await axios.post(`${API_BASE_URL}/action`, {
+        path: "car:fetchAndStoreCarSpecifications",
+        args: {
+          maker: newCar.maker,
+          model: newCar.model,
+          year: newCar.year,
+          trim: newCar.trim,
+          registrationNumber: newCar.registrationNumber,
+        },
+      });
       if (response.data) {
         onCarAdded(response.data);
         setNewCar({
