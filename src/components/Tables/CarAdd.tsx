@@ -10,15 +10,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import { Copy } from "lucide-react";
 import { Car } from "@/types/car";
 import { fetchMakes, fetchModels, fetchTrims } from "../../api/carQueryApi";  
-
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
 interface CarAddProps {
   onCarAdded: (car: Car) => void;
 }
+
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
 const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
   const [isAddingCar, setIsAddingCar] = useState(false);
@@ -30,9 +29,8 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
     lastMaintenanceDate: "",
     available: false,
     year: 0,
-    disabled: false,
     registrationNumber: "",
-    pictures: [] as string[],
+    pictures: [] as File[],
     pricePerDay: 0,
   });
   const [loading, setLoading] = useState(false);
@@ -41,7 +39,6 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
   const [makes, setMakes] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [trims, setTrims] = useState<string[]>([]);
-  const [yearRange, setYearRange] = useState<{ min_year: number; max_year: number }>({ min_year: 0, max_year: 0 });
 
   useEffect(() => {
     const minYear = 2001;
@@ -120,20 +117,22 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    const { name, value, files, type, checked } = e.target as HTMLInputElement;
 
     if (name === "pictures") {
-      setNewCar((prev) => ({
-        ...prev,
-        pictures: value.split(",").map((url) => url.trim()),
-      }));
+      if (files) {
+        const selectedFiles = Array.from(files);
+        setNewCar((prev) => ({
+          ...prev,
+          pictures: selectedFiles,
+        }));
+      }
     } else if (name === "pricePerDay") {
       setNewCar((prev) => ({
         ...prev,
         pricePerDay: parseFloat(value),
       }));
-    } else if (name === "available" || name === "disabled") {
+    } else if (type === "checkbox") {
       setNewCar((prev) => ({
         ...prev,
         [name]: checked,
@@ -151,36 +150,61 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
     }
   };
 
+  /**
+   * Converts a File object to a Base64 string.
+   * @param file The file to convert.
+   * @returns A promise that resolves to the Base64 string.
+   */
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+        } else {
+          reject("Failed to convert file to base64.");
+        }
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  /**
+   * Handles the form submission:
+   * 1. Uploads images to Cloudinary.
+   * 2. Saves the image URLs along with other car data to the database.
+   */
   const handleAddCarSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
+      // Upload images to Cloudinary
+      const uploadedImages: string[] = [];
+      for (const file of newCar.pictures) {
+        const base64 = await fileToBase64(file);
+        const response = await axios.post("/api/upload", {
+          file: base64,
+          filename: file.name,
+        });
+        if (response.data && response.data.url) {
+          uploadedImages.push(response.data.url);
+        }
+      }
+
+      // Prepare car data with image URLs
+      const carData = {
+        ...newCar,
+        pictures: uploadedImages,
+      };
+
+      // Make API call using the same pattern as staffTable
       const response = await axios.post(`${API_BASE_URL}/mutation`, {
         path: "car:createCar",
-        args: {
-          model: newCar.model,
-          trim: newCar.trim,
-          color: newCar.color,
-          maker: newCar.maker,
-          lastMaintenanceDate: newCar.lastMaintenanceDate,
-          available: newCar.available,
-          year: newCar.year,
-          registrationNumber: newCar.registrationNumber,
-          pictures: newCar.pictures,
-          pricePerDay: newCar.pricePerDay,
-        },
+        args: carData
       });
-      const response2 = await axios.post(`${API_BASE_URL}/action`, {
-        path: "car:fetchAndStoreCarSpecifications",
-        args: {
-          maker: newCar.maker,
-          model: newCar.model,
-          year: newCar.year,
-          trim: newCar.trim,
-          registrationNumber: newCar.registrationNumber,
-        },
-      });
+
       if (response.data) {
         onCarAdded(response.data);
         setNewCar({
@@ -191,16 +215,15 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
           lastMaintenanceDate: "",
           available: false,
           year: 0,
-          disabled: false,
           registrationNumber: "",
           pictures: [],
           pricePerDay: 0,
         });
         setIsAddingCar(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error adding car:", err);
-      setError("Failed to add car. Please try again.");
+      setError(err.response?.data?.message || "Failed to add car. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -357,14 +380,26 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
             </div>
             <div>
               <label htmlFor="pictures" className="text-sm font-medium">
-                Picture URLs (comma-separated)
+                Upload Pictures
               </label>
-              <Input
+              <input
                 id="pictures"
                 name="pictures"
-                value={newCar.pictures.join(", ")}
+                type="file"
+                accept="image/*"
+                multiple
                 onChange={handleInputChange}
+                className="w-full p-2 border rounded"
               />
+              {newCar.pictures.length > 0 && (
+                <ul className="mt-2">
+                  {newCar.pictures.map((file, index) => (
+                    <li key={index} className="text-sm">
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div>
               <label htmlFor="pricePerDay" className="text-sm font-medium">
