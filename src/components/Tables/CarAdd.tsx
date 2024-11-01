@@ -204,7 +204,17 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
         path: "car:createCar",
         args: carData
       });
-
+      const response2 = await axios.post(`${API_BASE_URL}/action`, {
+        path: "car:fetchAndStoreCarSpecifications",
+        args: {
+            maker: carData.maker,
+            model: carData.model,
+            year: carData.year,
+            trim: carData.trim,
+            registrationNumber: carData.registrationNumber
+        }
+      }); 
+      
       if (response.data) {
         onCarAdded(response.data);
         setNewCar({
