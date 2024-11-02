@@ -51,7 +51,6 @@ const PaymentTransactions = () => {
     amount: "",
     paymentDate: new Date().toISOString().split('T')[0],
     paymentType: "",
-    paymentIntentId: "",
   });
   const [newPaymentBookingDetails, setNewPaymentBookingDetails] = useState<any>(null);
 
@@ -161,6 +160,19 @@ const PaymentTransactions = () => {
       setLoading(true);
       setError(null);
       try {
+        // Get current booking details
+        const bookingResponse = await axios.post(`${API_BASE_URL}/query`, {
+          path: "bookings:getBookingDetails",
+          args: { bookingId: editingTransaction.bookingId }
+        });
+        
+        const bookingDetails = bookingResponse.data.value;
+        
+        // Calculate amount difference
+        const oldAmount = transactions.find(t => t._id === editingTransaction._id)?.amount || 0;
+        const amountDifference = parseFloat(editingTransaction.amount) - oldAmount;
+
+        // Update payment
         const response = await axios.post(`${API_BASE_URL}/mutation`, {
           path: "payment:editPayment",
           args: {
@@ -169,11 +181,30 @@ const PaymentTransactions = () => {
             amount: parseFloat(editingTransaction.amount),
             paymentDate: editingTransaction.paymentDate,
             paymentType: editingTransaction.paymentType,
-            paymentIntentId: editingTransaction.paymentIntentId,
           }
         });
 
         if (response.data) {
+          // Calculate new status and paid amount
+          const newPaidAmount = (bookingDetails.paidAmount || 0) + amountDifference;
+          let newStatus = bookingDetails.status;
+
+          if (bookingDetails.status === 'pending') {
+            newStatus = 'inprogress';
+          } else if (newPaidAmount >= bookingDetails.totalCost) {
+            newStatus = 'completed';
+          }
+
+          // Update booking status and paid amount
+          await axios.post(`${API_BASE_URL}/mutation`, {
+            path: "bookings:updateBooking",
+            args: {
+              id: editingTransaction.bookingId,
+              status: newStatus,
+              paidAmount: newPaidAmount
+            }
+          });
+
           fetchPayments();
           setEditingTransaction(null);
           setIsEditingTransaction(false);
@@ -249,6 +280,15 @@ const PaymentTransactions = () => {
     setError(null);
 
     try {
+      // Get current booking details
+      const bookingResponse = await axios.post(`${API_BASE_URL}/query`, {
+        path: "bookings:getBookingDetails",
+        args: { bookingId: newPayment.bookingId }
+      });
+      
+      const bookingDetails = bookingResponse.data.value;
+      
+      // Create payment
       const response = await axios.post(`${API_BASE_URL}/mutation`, {
         path: "payment:createPayment",
         args: {
@@ -256,11 +296,30 @@ const PaymentTransactions = () => {
           amount: parseFloat(newPayment.amount),
           paymentDate: newPayment.paymentDate,
           paymentType: newPayment.paymentType,
-          paymentIntentId: newPayment.paymentIntentId,
         }
       });
 
       if (response.data) {
+        // Calculate new status and paid amount
+        const newPaidAmount = (bookingDetails.paidAmount || 0) + parseFloat(newPayment.amount);
+        let newStatus = bookingDetails.status;
+
+        if (bookingDetails.status === 'pending') {
+          newStatus = 'inprogress';
+        } else if (newPaidAmount >= bookingDetails.totalCost) {
+          newStatus = 'completed';
+        }
+
+        // Update booking status and paid amount
+        await axios.post(`${API_BASE_URL}/mutation`, {
+          path: "bookings:updateBooking",
+          args: {
+            id: newPayment.bookingId,
+            status: newStatus,
+            paidAmount: newPaidAmount
+          }
+        });
+
         fetchPayments();
         setIsAddingPayment(false);
         setNewPayment({
@@ -268,7 +327,6 @@ const PaymentTransactions = () => {
           amount: "",
           paymentDate: new Date().toISOString().split('T')[0],
           paymentType: "",
-          paymentIntentId: "",
         });
         setNewPaymentBookingDetails(null);
       }
@@ -358,17 +416,6 @@ const PaymentTransactions = () => {
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="paymentIntentId" className="text-sm font-medium">Payment Intent ID</label>
-                <Input
-                  id="paymentIntentId"
-                  name="paymentIntentId"
-                  value={newPayment.paymentIntentId}
-                  onChange={handleNewPaymentInputChange}
-                  required
-                />
-              </div>
-
               {error && <p className="text-red-500">{error}</p>}
 
               <Button
@@ -392,8 +439,6 @@ const PaymentTransactions = () => {
             <thead>
               <tr className="bg-gray-2 text-left dark:bg-meta-4">
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Receipt Number</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Booking ID</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Customer ID</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Customer Name</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Car ID</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Amount</th>
@@ -406,8 +451,6 @@ const PaymentTransactions = () => {
               {transactions.map((transaction) => (
                 <tr key={transaction._id} className="border-b border-stroke dark:border-strokedark">
                   <td className="py-3 px-4">{transaction.receiptNumber}</td>
-                  <td className="py-3 px-4">{transaction.bookingId}</td>
-                  <td className="py-3 px-4">{transaction.bookingDetails?.customerId}</td>
                   <td className="py-3 px-4">{transaction.bookingDetails?.customerName}</td>
                   <td className="py-3 px-4">{transaction.bookingDetails?.carId}</td>
                   <td className="py-3 px-4">${transaction.amount.toFixed(2)}</td>
@@ -489,17 +532,6 @@ const PaymentTransactions = () => {
                                   <option value="paypal">PayPal</option>
                                   <option value="cash">Cash</option>
                                 </select>
-                              </div>
-
-                              <div>
-                                <label htmlFor="paymentIntentId" className="text-sm font-medium">Payment Intent ID</label>
-                                <Input
-                                  id="paymentIntentId"
-                                  name="paymentIntentId"
-                                  value={editingTransaction.paymentIntentId}
-                                  onChange={handleInputChange}
-                                  required
-                                />
                               </div>
 
                               {error && <p className="text-red-500">{error}</p>}
