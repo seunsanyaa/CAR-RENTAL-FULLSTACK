@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -11,6 +11,14 @@ import {
 } from "../ui/sheet";
 import { Promotion } from "@/types/Promotion";
 import axios from "axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface PromotionsAddProps {
   onPromotionAdded: (promotion: Promotion) => void;
@@ -35,6 +43,50 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCarSelector, setShowCarSelector] = useState(false);
+  const [availableCars, setAvailableCars] = useState<Car[]>([]);
+  const [selectedCars, setSelectedCars] = useState<Set<string>>(new Set());
+  const [isLoadingPerformance, setIsLoadingPerformance] = useState(false);
+
+  useEffect(() => {
+    if (showCarSelector) {
+      fetchCars();
+    }
+  }, [showCarSelector]);
+
+  const fetchCars = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "car:getAllCars",
+        args: {}
+      });
+      if (response.data) {
+        setAvailableCars(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching cars:', err);
+    }
+  };
+
+  const handleCarSelection = (carId: string) => {
+    setSelectedCars(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(carId)) {
+        newSet.delete(carId);
+      } else {
+        newSet.add(carId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleAcceptCarSelection = () => {
+    setNewPromotion(prev => ({
+      ...prev,
+      specificTarget: Array.from(selectedCars)
+    }));
+    setShowCarSelector(false);
+  };
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -55,6 +107,10 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type, checked, files } = e.target as HTMLInputElement;
+    
+    if (name === "target" && value === "specific") {
+      setShowCarSelector(true);
+    }
     
     if (name === "promotionImage" && files && files[0]) {
       setNewPromotion((prev) => ({
@@ -133,210 +189,320 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
     }
   };
 
+  const handleSelectTopPerforming = async () => {
+    setIsLoadingPerformance(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "analytics:getMostRentedCars",
+        args: { limit: 8 } // Select top 8 performing cars
+      });
+      
+      if (response.data?.value) {
+        const topCarIds = response.data.value
+          .filter((item: any) => item.car) // Ensure car exists
+          .map((item: any) => item.car._id);
+        
+        setSelectedCars(new Set(topCarIds));
+      }
+    } catch (err) {
+      console.error('Error fetching top performing cars:', err);
+    } finally {
+      setIsLoadingPerformance(false);
+    }
+  };
+
+  const handleSelectLeastPerforming = async () => {
+    setIsLoadingPerformance(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "analytics:getLeastRentedCars",
+        args: { limit: 8 } // Select 8 least performing cars
+      });
+      
+      if (response.data?.value) {
+        const leastCarIds = response.data.value
+          .filter((item: any) => item.car) // Ensure car exists
+          .map((item: any) => item.car._id);
+        
+        setSelectedCars(new Set(leastCarIds));
+      }
+    } catch (err) {
+      console.error('Error fetching least performing cars:', err);
+    } finally {
+      setIsLoadingPerformance(false);
+    }
+  };
+
   return (
-    <Sheet open={isAddingPromotion} onOpenChange={setIsAddingPromotion}>
-      <SheetTrigger asChild>
-        <Button variant="default" className="text-white">
-          Add Promotion
-        </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <div className="h-full flex flex-col">
-          <SheetHeader>
-            <SheetTitle>Add New Promotion</SheetTitle>
-            <SheetDescription>
-              Enter the details of the new promotion below. Click "Add" to save.
-            </SheetDescription>
-          </SheetHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
-            <div>
-              <label htmlFor="promotionTitle" className="text-sm font-medium">
-                Title
-              </label>
-              <Input
-                id="promotionTitle"
-                name="promotionTitle"
-                value={newPromotion.promotionTitle}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="promotionDescription" className="text-sm font-medium">
-                Description
-              </label>
-              <textarea
-                id="promotionDescription"
-                name="promotionDescription"
-                value={newPromotion.promotionDescription}
-                onChange={handleInputChange}
-                required
-                className="w-full p-2 border rounded"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="promotionImage" className="text-sm font-medium">
-                Promotion Image
-              </label>
-              <input
-                id="promotionImage"
-                name="promotionImage"
-                type="file"
-                accept="image/*"
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded"
-                required
-              />
-              {newPromotion.promotionImage instanceof File && (
-                <p className="text-sm mt-1">{newPromotion.promotionImage.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="promotionType" className="text-sm font-medium">
-                Type
-              </label>
-              <select
-                id="promotionType"
-                name="promotionType"
-                value={newPromotion.promotionType}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded"
-                required
-              >
-                <option value="discount">Discount</option>
-                <option value="offer">Offer</option>
-                <option value="upgrade">Upgrade</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="promotionValue" className="text-sm font-medium">
-                Promotion Value
-              </label>
-              <Input
-                id="promotionValue"
-                name="promotionValue"
-                type="number"
-                value={newPromotion.promotionValue}
-                onChange={handleInputChange}
-                required
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="promotionStartDate" className="text-sm font-medium">
-                Start Date
-              </label>
-              <Input
-                id="promotionStartDate"
-                name="promotionStartDate"
-                type="date"
-                value={newPromotion.promotionStartDate}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="promotionEndDate" className="text-sm font-medium">
-                End Date
-              </label>
-              <Input
-                id="promotionEndDate"
-                name="promotionEndDate"
-                type="date"
-                value={newPromotion.promotionEndDate}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="status" className="text-sm font-medium">
-                Status
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={newPromotion.status}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded"
-                required
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="expired">Expired</option>
-                <option value="scheduled">Scheduled</option>
-              </select>
-            </div>
-
-            <div className="flex items-center">
-              <label htmlFor="goldenMembersOnly" className="text-sm font-medium mr-2">
-                Golden Members Only
-              </label>
-              <input
-                id="goldenMembersOnly"
-                name="goldenMembersOnly"
-                type="checkbox"
-                checked={newPromotion.goldenMembersOnly}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="target" className="text-sm font-medium">
-                Target
-              </label>
-              <select
-                id="target"
-                name="target"
-                value={newPromotion.target}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded"
-                required
-              >
-                <option value="all">All</option>
-                <option value="specific">Specific</option>
-                <option value="none">None</option>
-              </select>
-            </div>
-
-            {newPromotion.target === 'specific' && (
+    <>
+      <Sheet open={isAddingPromotion} onOpenChange={setIsAddingPromotion}>
+        <SheetTrigger asChild>
+          <Button variant="default" className="text-white">
+            Add Promotion
+          </Button>
+        </SheetTrigger>
+        <SheetContent>
+          <div className="h-full flex flex-col">
+            <SheetHeader>
+              <SheetTitle>Add New Promotion</SheetTitle>
+              <SheetDescription>
+                Enter the details of the new promotion below. Click "Add" to save.
+              </SheetDescription>
+            </SheetHeader>
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
               <div>
-                <label htmlFor="specificTarget" className="text-sm font-medium">
-                  Specific Targets (comma-separated)
+                <label htmlFor="promotionTitle" className="text-sm font-medium">
+                  Title
                 </label>
                 <Input
-                  id="specificTarget"
-                  name="specificTarget"
-                  value={newPromotion.specificTarget.join(', ')}
+                  id="promotionTitle"
+                  name="promotionTitle"
+                  value={newPromotion.promotionTitle}
                   onChange={handleInputChange}
-                  placeholder="Enter targets separated by commas"
                   required
                 />
               </div>
-            )}
 
-            {error && <p className="text-red-500">{error}</p>}
-            
-            <div className="mt-4">
-              <Button
-                type="submit"
-                className="text-white w-full"
-                disabled={loading}
+              <div>
+                <label htmlFor="promotionDescription" className="text-sm font-medium">
+                  Description
+                </label>
+                <textarea
+                  id="promotionDescription"
+                  name="promotionDescription"
+                  value={newPromotion.promotionDescription}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="promotionImage" className="text-sm font-medium">
+                  Promotion Image
+                </label>
+                <input
+                  id="promotionImage"
+                  name="promotionImage"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                {newPromotion.promotionImage instanceof File && (
+                  <p className="text-sm mt-1">{newPromotion.promotionImage.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="promotionType" className="text-sm font-medium">
+                  Type
+                </label>
+                <select
+                  id="promotionType"
+                  name="promotionType"
+                  value={newPromotion.promotionType}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="discount">Discount</option>
+                  <option value="offer">Offer</option>
+                  <option value="upgrade">Upgrade</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="promotionValue" className="text-sm font-medium">
+                  Promotion Value
+                </label>
+                <Input
+                  id="promotionValue"
+                  name="promotionValue"
+                  type="number"
+                  value={newPromotion.promotionValue}
+                  onChange={handleInputChange}
+                  required
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="promotionStartDate" className="text-sm font-medium">
+                  Start Date
+                </label>
+                <Input
+                  id="promotionStartDate"
+                  name="promotionStartDate"
+                  type="date"
+                  value={newPromotion.promotionStartDate}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="promotionEndDate" className="text-sm font-medium">
+                  End Date
+                </label>
+                <Input
+                  id="promotionEndDate"
+                  name="promotionEndDate"
+                  type="date"
+                  value={newPromotion.promotionEndDate}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="status" className="text-sm font-medium">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={newPromotion.status}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="expired">Expired</option>
+                  <option value="scheduled">Scheduled</option>
+                </select>
+              </div>
+
+              <div className="flex items-center">
+                <label htmlFor="goldenMembersOnly" className="text-sm font-medium mr-2">
+                  Golden Members Only
+                </label>
+                <input
+                  id="goldenMembersOnly"
+                  name="goldenMembersOnly"
+                  type="checkbox"
+                  checked={newPromotion.goldenMembersOnly}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="target" className="text-sm font-medium">
+                  Target
+                </label>
+                <select
+                  id="target"
+                  name="target"
+                  value={newPromotion.target}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="all">All</option>
+                  <option value="specific">Specific</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+
+              {newPromotion.target === 'specific' && (
+                <div>
+                  <label htmlFor="specificTarget" className="text-sm font-medium">
+                    Specific Targets (comma-separated)
+                  </label>
+                  <Input
+                    id="specificTarget"
+                    name="specificTarget"
+                    value={newPromotion.specificTarget.join(', ')}
+                    onChange={handleInputChange}
+                    placeholder="Enter targets separated by commas"
+                    required
+                  />
+                </div>
+              )}
+
+              {error && <p className="text-red-500">{error}</p>}
+              
+              <div className="mt-4">
+                <Button
+                  type="submit"
+                  className="text-white w-full"
+                  disabled={loading}
+                >
+                  {loading ? "Adding..." : "Add Promotion"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={showCarSelector} onOpenChange={setShowCarSelector}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Select Cars</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex justify-center space-x-4 mb-4">
+            <Button 
+              variant="outline"
+              onClick={handleSelectTopPerforming}
+              disabled={isLoadingPerformance}
+            >
+              {isLoadingPerformance ? "Loading..." : "Select Top Performing"}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={handleSelectLeastPerforming}
+              disabled={isLoadingPerformance}
+            >
+              {isLoadingPerformance ? "Loading..." : "Select Least Performing"}
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4 p-4 max-h-[70vh] overflow-y-auto">
+            {availableCars.map((car) => (
+              <div
+                key={car._id}
+                className={`border rounded-lg p-2 cursor-pointer transition-all ${
+                  selectedCars.has(car._id) ? 'border-primary bg-primary/10' : 'border-gray-200'
+                }`}
+                onClick={() => handleCarSelection(car._id)}
               >
-                {loading ? "Adding..." : "Add Promotion"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </SheetContent>
-    </Sheet>
+                <div className="aspect-square relative mb-2">
+                  <img
+                    src={car.pictures?.[0] || '/placeholder-car.jpg'}
+                    alt={`${car.maker} ${car.model}`}
+                    className="object-cover w-full h-full rounded-md"
+                  />
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium">{car.maker} {car.model}</p>
+                  <p className="text-gray-500">{car.year}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end space-x-2 p-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowCarSelector(false);
+                setSelectedCars(new Set());
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAcceptCarSelection}>
+              Accept ({selectedCars.size} selected)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
