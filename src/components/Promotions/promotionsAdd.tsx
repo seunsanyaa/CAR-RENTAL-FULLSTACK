@@ -40,6 +40,8 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
     goldenMembersOnly: false,
     target: "all",
     specificTarget: [] as string[],
+    minimumRentals: 0,
+    minimumMoneySpent: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,6 +148,18 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
     setError(null);
 
     try {
+      // Validate permanent promotion
+      if (newPromotion.promotionType === 'permenant' && 
+          (newPromotion.promotionStartDate || newPromotion.promotionEndDate)) {
+        throw new Error('Permanent promotions cannot have start/end dates');
+      }
+
+      // Validate non-permanent promotion
+      if (newPromotion.promotionType !== 'permenant' && 
+          (!newPromotion.promotionStartDate || !newPromotion.promotionEndDate)) {
+        throw new Error('Non-permanent promotions must have start and end dates');
+      }
+
       let imageUrl = newPromotion.promotionImage;
       if (newPromotion.promotionImage instanceof File) {
         const base64 = await fileToBase64(newPromotion.promotionImage);
@@ -161,6 +175,8 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
         args: {
           ...newPromotion,
           promotionImage: imageUrl,
+          minimumRentals: parseInt(newPromotion.minimumRentals.toString()),
+          minimumMoneySpent: parseFloat(newPromotion.minimumMoneySpent.toString()),
         }
       });
 
@@ -178,12 +194,14 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
           goldenMembersOnly: false,
           target: "all",
           specificTarget: [],
+          minimumRentals: 0,
+          minimumMoneySpent: 0,
         });
         setIsAddingPromotion(false);
       }
     } catch (err: any) {
       console.error("Error adding promotion:", err);
-      setError(err.response?.data?.message || "Failed to add promotion. Please try again.");
+      setError(err.response?.data?.message || err.message || "Failed to add promotion. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -232,6 +250,8 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
       setIsLoadingPerformance(false);
     }
   };
+
+  const isPermanentPromotion = newPromotion.promotionType === 'permenant';
 
   return (
     <>
@@ -310,7 +330,7 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                   <option value="discount">Discount</option>
                   <option value="offer">Offer</option>
                   <option value="upgrade">Upgrade</option>
-                  <option value="permanent">Permanent</option>
+                  <option value="permenant">Permanent</option>
                 </select>
               </div>
 
@@ -330,33 +350,72 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                 />
               </div>
 
-              <div>
-                <label htmlFor="promotionStartDate" className="text-sm font-medium">
-                  Start Date
-                </label>
-                <Input
-                  id="promotionStartDate"
-                  name="promotionStartDate"
-                  type="date"
-                  value={newPromotion.promotionStartDate}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+              {!isPermanentPromotion ? (
+                <>
+                  <div>
+                    <label htmlFor="promotionStartDate" className="text-sm font-medium">
+                      Start Date
+                    </label>
+                    <Input
+                      id="promotionStartDate"
+                      name="promotionStartDate"
+                      type="date"
+                      value={newPromotion.promotionStartDate}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
 
-              <div>
-                <label htmlFor="promotionEndDate" className="text-sm font-medium">
-                  End Date
-                </label>
-                <Input
-                  id="promotionEndDate"
-                  name="promotionEndDate"
-                  type="date"
-                  value={newPromotion.promotionEndDate}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+                  <div>
+                    <label htmlFor="promotionEndDate" className="text-sm font-medium">
+                      End Date
+                    </label>
+                    <Input
+                      id="promotionEndDate"
+                      name="promotionEndDate"
+                      type="date"
+                      value={newPromotion.promotionEndDate}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="minimumRentals" className="text-sm font-medium">
+                      Minimum Rentals Required ({newPromotion.minimumRentals})
+                    </label>
+                    <input
+                      id="minimumRentals"
+                      name="minimumRentals"
+                      type="range"
+                      min="0"
+                      max="20"
+                      value={newPromotion.minimumRentals}
+                      onChange={handleInputChange}
+                      className="w-full"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
+                      Minimum Money Spent ($)
+                    </label>
+                    <Input
+                      id="minimumMoneySpent"
+                      name="minimumMoneySpent"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newPromotion.minimumMoneySpent}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label htmlFor="status" className="text-sm font-medium">

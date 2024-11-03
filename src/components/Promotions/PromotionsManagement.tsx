@@ -86,7 +86,7 @@ const PromotionsManagement = () => {
           promotionTitle: editingPromotion.promotionTitle,
           promotionDescription: editingPromotion.promotionDescription,
           promotionImage: editingPromotion.promotionImage,
-          promotionType: editingPromotion.promotionType as 'discount' | 'offer' | 'upgrade',
+          promotionType: editingPromotion.promotionType as 'discount' | 'offer' | 'upgrade' | 'permenant',
           promotionValue: editingPromotion.promotionValue,
           promotionStartDate: editingPromotion.promotionStartDate,
           promotionEndDate: editingPromotion.promotionEndDate,
@@ -154,8 +154,7 @@ const PromotionsManagement = () => {
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Title</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Type</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Value</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Start Date</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">End Date</th>
+                <th className="py-4 px-4 font-medium text-black dark:text-white">Duration</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Status</th>
                 <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
               </tr>
@@ -189,8 +188,19 @@ const PromotionsManagement = () => {
                     <td className="py-3 px-4">{promotion.promotionTitle}</td>
                     <td className="py-3 px-4">{promotion.promotionType}</td>
                     <td className="py-3 px-4">{promotion.promotionValue}</td>
-                    <td className="py-3 px-4">{promotion.promotionStartDate}</td>
-                    <td className="py-3 px-4">{promotion.promotionEndDate}</td>
+                    <td className="py-3 px-4">
+                      {promotion.promotionType === 'permenant' ? (
+                        <div>
+                          <div>Min. Rentals: {promotion.minimumRentals}</div>
+                          <div>Min. Spent: ${promotion.minimumMoneySpent}</div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div>Start: {new Date(promotion.promotionStartDate).toLocaleDateString()}</div>
+                          <div>End: {new Date(promotion.promotionEndDate).toLocaleDateString()}</div>
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 px-4">{promotion.status}</td>
                     <td className="py-3 px-4 flex space-x-2">
                       <Sheet open={isEditingPromotion} onOpenChange={setIsEditingPromotion}>
@@ -242,6 +252,7 @@ const PromotionsManagement = () => {
                                     <option value="discount">Discount</option>
                                     <option value="offer">Offer</option>
                                     <option value="upgrade">Upgrade</option>
+                                    <option value="permenant">Permanent</option>
                                   </select>
                                 </div>
                                 <div>
@@ -255,28 +266,67 @@ const PromotionsManagement = () => {
                                     required
                                   />
                                 </div>
-                                <div>
-                                  <label htmlFor="promotionStartDate" className="text-sm font-medium">Start Date</label>
-                                  <Input
-                                    id="promotionStartDate"
-                                    name="promotionStartDate"
-                                    type="date"
-                                    value={editingPromotion.promotionStartDate}
-                                    onChange={handleInputChange}
-                                    required
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="promotionEndDate" className="text-sm font-medium">End Date</label>
-                                  <Input
-                                    id="promotionEndDate"
-                                    name="promotionEndDate"
-                                    type="date"
-                                    value={editingPromotion.promotionEndDate}
-                                    onChange={handleInputChange}
-                                    required
-                                  />
-                                </div>
+                                {editingPromotion.promotionType === 'permenant' ? (
+                                  <>
+                                    <div>
+                                      <label htmlFor="minimumRentals" className="text-sm font-medium">
+                                        Minimum Rentals Required ({editingPromotion.minimumRentals})
+                                      </label>
+                                      <input
+                                        id="minimumRentals"
+                                        name="minimumRentals"
+                                        type="range"
+                                        min="0"
+                                        max="20"
+                                        value={editingPromotion.minimumRentals}
+                                        onChange={handleInputChange}
+                                        className="w-full"
+                                        required
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
+                                        Minimum Money Spent ($)
+                                      </label>
+                                      <Input
+                                        id="minimumMoneySpent"
+                                        name="minimumMoneySpent"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={editingPromotion.minimumMoneySpent}
+                                        onChange={handleInputChange}
+                                        required
+                                      />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div>
+                                      <label htmlFor="promotionStartDate" className="text-sm font-medium">Start Date</label>
+                                      <Input
+                                        id="promotionStartDate"
+                                        name="promotionStartDate"
+                                        type="date"
+                                        value={editingPromotion.promotionStartDate}
+                                        onChange={handleInputChange}
+                                        required
+                                      />
+                                    </div>
+                                    <div>
+                                      <label htmlFor="promotionEndDate" className="text-sm font-medium">End Date</label>
+                                      <Input
+                                        id="promotionEndDate"
+                                        name="promotionEndDate"
+                                        type="date"
+                                        value={editingPromotion.promotionEndDate}
+                                        onChange={handleInputChange}
+                                        required
+                                      />
+                                    </div>
+                                  </>
+                                )}
                                 <div>
                                   <label htmlFor="status" className="text-sm font-medium">Status</label>
                                   <select
@@ -384,12 +434,27 @@ const PromotionsManagement = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p><strong>Title:</strong> {promotion.promotionTitle}</p>
+                            <p><strong>Description:</strong> {promotion.promotionDescription}</p>
                             <p><strong>Type:</strong> {promotion.promotionType}</p>
-                            
+                            <p><strong>Value:</strong> {promotion.promotionValue}</p>
                           </div>
                           <div>
-                            <p><strong>Start Date:</strong> {promotion.promotionStartDate}</p>
-                            <p><strong>End Date:</strong> {promotion.promotionEndDate}</p>
+                            {promotion.promotionType === 'permenant' ? (
+                              <>
+                                <p><strong>Minimum Rentals:</strong> {promotion.minimumRentals}</p>
+                                <p><strong>Minimum Money Spent:</strong> ${promotion.minimumMoneySpent}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p><strong>Start Date:</strong> {new Date(promotion.promotionStartDate).toLocaleDateString()}</p>
+                                <p><strong>End Date:</strong> {new Date(promotion.promotionEndDate).toLocaleDateString()}</p>
+                              </>
+                            )}
+                            <p><strong>Golden Members Only:</strong> {promotion.goldenMembersOnly ? 'Yes' : 'No'}</p>
+                            <p><strong>Target:</strong> {promotion.target}</p>
+                            {promotion.target === 'specific' && (
+                              <p><strong>Specific Targets:</strong> {promotion.specificTarget.join(', ')}</p>
+                            )}
                           </div>
                         </div>
                       </td>
