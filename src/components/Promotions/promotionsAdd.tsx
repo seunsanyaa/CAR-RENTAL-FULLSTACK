@@ -310,6 +310,7 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                   <option value="discount">Discount</option>
                   <option value="offer">Offer</option>
                   <option value="upgrade">Upgrade</option>
+                  <option value="permanent">Permanent</option>
                 </select>
               </div>
 
