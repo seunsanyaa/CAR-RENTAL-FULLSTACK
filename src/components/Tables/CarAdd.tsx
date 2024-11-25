@@ -32,6 +32,7 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
     registrationNumber: "",
     pictures: [] as File[],
     pricePerDay: 0,
+    categories: [] as string[],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,15 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
   const [makes, setMakes] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [trims, setTrims] = useState<string[]>([]);
+
+  const carCategories = [
+    "Sedan",
+    "SUV",
+    "Luxury",
+    "Van",
+    "Convertible",
+    "Truck"
+  ];
 
   useEffect(() => {
     const minYear = 2001;
@@ -68,7 +78,7 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
     }
     setModels([]);
     setTrims([]);
-    setNewCar((prev) => ({ ...prev, maker: "", model: "", trim: "" }));
+    setNewCar((prev) => ({ ...prev, maker: "", model: "", trim: "", categories: [] }));
   }, [newCar.year]);
 
   useEffect(() => {
@@ -90,7 +100,7 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
       setModels([]);
     }
     setTrims([]);
-    setNewCar((prev) => ({ ...prev, model: "", trim: "" }));
+    setNewCar((prev) => ({ ...prev, model: "", trim: "", categories: [] }));
   }, [newCar.year, newCar.maker]);
 
   useEffect(() => {
@@ -193,10 +203,16 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
         }
       }
 
-      // Prepare car data with image URLs
+      // Filter out empty strings, null, and undefined from categories array
+      const filteredCategories = newCar.categories.filter((category): category is string => 
+        typeof category === 'string' && category !== ""
+      );
+
+      // Prepare car data with image URLs and categories
       const carData = {
         ...newCar,
         pictures: uploadedImages,
+        categories: filteredCategories,
       };
 
       // Make API call using the same pattern as staffTable
@@ -228,6 +244,7 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
           registrationNumber: "",
           pictures: [],
           pricePerDay: 0,
+          categories: [],
         });
         setIsAddingCar(false);
       }
@@ -340,6 +357,90 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="category1" className="text-sm font-medium">
+                Primary Category *
+              </label>
+              <select
+                id="category1"
+                name="category1"
+                value={newCar.categories[0] || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setNewCar(prev => ({
+                    ...prev,
+                    categories: [value, ...prev.categories.slice(1)]
+                  }));
+                }}
+                required
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Category</option>
+                {carCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {newCar.categories[0] && (
+              <div>
+                <label htmlFor="category2" className="text-sm font-medium">
+                  Secondary Category (Optional)
+                </label>
+                <select
+                  id="category2"
+                  name="category2"
+                  value={newCar.categories[1] || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewCar(prev => ({
+                      ...prev,
+                      categories: [prev.categories[0], value, prev.categories[2]]
+                    }));
+                  }}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">Select Category</option>
+                  {carCategories
+                    .filter(cat => cat !== newCar.categories[0])
+                    .map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {newCar.categories[1] && (
+              <div>
+                <label htmlFor="category3" className="text-sm font-medium">
+                  Third Category (Optional)
+                </label>
+                <select
+                  id="category3"
+                  name="category3"
+                  value={newCar.categories[2] || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewCar(prev => ({
+                      ...prev,
+                      categories: [prev.categories[0], prev.categories[1], value]
+                    }));
+                  }}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">Select Category</option>
+                  {carCategories
+                    .filter(cat => !newCar.categories.slice(0, 2).includes(cat))
+                    .map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label htmlFor="color" className="text-sm font-medium">
                 Color
