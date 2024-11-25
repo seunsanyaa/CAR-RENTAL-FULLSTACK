@@ -376,7 +376,7 @@ const CarsTable = () => {
                   </tr>
                   {expandedRows.has(car.registrationNumber) && (
                     <tr className="bg-gray-50 dark:bg-gray-800">
-                      <td colSpan={8} className="py-3 px-4"> {/* Updated colspan to 8 to match headers */}
+                      <td colSpan={8} className="py-3 px-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p><strong>Color:</strong> {car.color}</p>
@@ -387,6 +387,7 @@ const CarsTable = () => {
                           <div>
                             <p><strong>Available:</strong> {car.available ? "Yes" : "No"}</p>
                             <p><strong>Disabled:</strong> {car.disabled ? "Yes" : "No"}</p>
+                            <p><strong>Categories:</strong> {car.categories?.join(", ") || "No categories"}</p>
                           </div>
                         </div>
                       </td>
