@@ -1,10 +1,11 @@
 "use client"
 
-import { StaffMember, User } from "@/types/staff";
-import axios from "axios";
+import { addStaffMember, deleteStaffMember, fetchAllStaff, updateStaffMember } from '@/endpoints/management';
+import { StaffMember } from "@/types/staff";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Copy } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -19,7 +20,38 @@ import {
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
 const StaffTable = () => {
-  const [staffData, setStaffData] = useState<(StaffMember & { user?: User })[]>([]);
+  const queryClient = useQueryClient();
+  
+  const { data: staffData, isLoading, error } = useQuery({
+    queryKey: ['staff'],
+    queryFn: fetchAllStaff
+  });
+
+  const addMutation = useMutation({
+    mutationFn: addStaffMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      setIsAddingStaff(false);
+      setNewStaff({ role: '', email: '' });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { role: string; email: string } }) =>
+      updateStaffMember(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      setEditingStaff(null);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteStaffMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    }
+  });
+
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [newStaff, setNewStaff] = useState({
@@ -27,26 +59,10 @@ const StaffTable = () => {
     email: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const handleDelete = async (id: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.post(`${API_BASE_URL}/mutation`, {
-        path: "staff:deleteStaffMember",
-        args: { id }
-      });
-      if (response.data) {
-        setStaffData(staffData.filter((staff) => staff._id !== id));
-      }
-    } catch (err) {
-      console.error('Error deleting staff member:', err);
-      setError('Failed to delete staff member. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const handleEdit = (staff: StaffMember) => {
@@ -85,115 +101,19 @@ const StaffTable = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (editingStaff) {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.post(`${API_BASE_URL}/mutation`, {
-          path: "staff:updateStaffMember",
-          args: {
-            id: editingStaff._id,
-            role: editingStaff.role,
-            email: editingStaff.email,
-          }
-        });
-        if (response.data) {
-          setStaffData(staffData.map((staff) =>
-            staff._id === editingStaff._id ? editingStaff : staff
-          ));
-          setEditingStaff(null);
+      updateMutation.mutate({
+        id: editingStaff._id,
+        data: {
+          role: editingStaff.role,
+          email: editingStaff.email,
         }
-      } catch (err) {
-        console.error('Error updating staff member:', err);
-        setError('Failed to update staff member. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const fetchStaff = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.post(`${API_BASE_URL}/query`, {
-        path: "staff:getAllStaff",
-        args: {}
       });
-      if (response.data) {
-        const staffMembers = response.data.value;
-        const staffWithUserDetails = await Promise.all(
-          staffMembers.map(async (staff: StaffMember) => {
-            const userResponse = await axios.post(`${API_BASE_URL}/query`, {
-              path: "users:getUserByEmail",
-              args: { email: staff.email }
-            });
-            return { ...staff, user: userResponse.data.value };
-          })
-        );
-
-        console.log(staffWithUserDetails)
-        setStaffData(staffWithUserDetails);
-      }
-    } catch (err) {
-      console.error('Error fetching staff members:', err);
-      setError('Failed to fetch staff members. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchStaff();
-  }, [newStaff]);
 
   const handleAddStaffSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      // Add the new staff member
-      const response = await axios.post(`${API_BASE_URL}/mutation`, {
-        path: "staff:addStaffMember",
-        args: {
-          role: newStaff.role,
-          email: newStaff.email,
-        }
-      });
-
-      if (response.data) {
-        const addedStaff = response.data;
-        setStaffData([...staffData, addedStaff]);
-        setNewStaff({
-          role: "",
-          email: "",
-        });
-        setIsAddingStaff(false);
-
-        // Send a welcome email using the API route
-        try {
-          await fetch('/api/sendEmail', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              to: addedStaff.email,
-              subject: 'Welcome to the Team!',
-              text: `Hello ${addedStaff.role},\n\nWelcome to the team! We're excited to have you on board.\n\nBest regards,\nYour Company`,
-              html: `<p>Hello <strong>${addedStaff.role}</strong>,</p><p>Welcome to the team! We're excited to have you on board.</p><p>Best regards,<br>Your Company</p>`,
-            }),
-          });
-          console.log('Welcome email sent successfully');
-        } catch (emailErr) {
-          console.error('Error sending welcome email:', emailErr);
-        }
-      }
-    } catch (err) {
-      console.error('Error adding staff member:', err);
-      setError('Failed to add staff member. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    addMutation.mutate(newStaff);
   };
 
   const handleCopyStaff = (staff: StaffMember) => {
@@ -263,10 +183,10 @@ const StaffTable = () => {
         </Sheet>
       </div>
       
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      {isLoading && <p>Loading...</p>}
+      {error && <p className="text-red-500">{error.message}</p>}
       
-      {!loading && !error && (
+      {!isLoading && !error && (
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
             <thead>
@@ -279,7 +199,7 @@ const StaffTable = () => {
               </tr>
             </thead>
             <tbody>
-              {staffData.map((staff) => (
+              {staffData?.map((staff) => (
                 <React.Fragment key={staff._id}>
                   <tr className="border-b border-stroke dark:border-strokedark">
                     <td className="py-3 px-4">
