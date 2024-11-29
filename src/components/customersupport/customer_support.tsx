@@ -3,7 +3,8 @@
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, Send } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 interface Customer {
   id: string;
@@ -13,28 +14,91 @@ interface Customer {
   lastMessageTime: string;
 }
 
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
+
 const CustomerSupport = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [userDetails, setUserDetails] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  // Dummy data for UI demonstration
-  const customers: Customer[] = [
-    {
-      id: "CUST001",
-      name: "John Doe",
-      unreadCount: 3,
-      lastMessage: "Hello, I need help with my order",
-      lastMessageTime: "10:30 AM"
-    },
-    {
-      id: "CUST002",
-      name: "Jane Smith",
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "customers:getAllCustomers",
+        args: {}
+      });
+      setCustomers(response.data.value);
+
+      if (response.data.value?.length) {
+        const userResponse = await axios.post(`${API_BASE_URL}/query`, {
+          path: "users:getManyUsers",
+          args: { userIds: response.data.value.map((c: { userId: string }) => c.userId) }
+        });
+        setUserDetails(userResponse.data.value);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedCustomer) return;
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "chat:getMessagesByCustomerId",
+        args: { customerId: selectedCustomer }
+      });
+      setMessages(response.data.value);
+    };
+    fetchMessages();
+  }, [selectedCustomer]);
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !selectedCustomer) return;
+    
+    await axios.post(`${API_BASE_URL}/mutation`, {
+      path: "chat:sendMessage",
+      args: {
+        customerId: selectedCustomer,
+        message: message.trim(),
+        isAdmin: true,
+        timestamp: new Date().toISOString(),
+      }
+    });
+    
+    setMessage("");
+    const response = await axios.post(`${API_BASE_URL}/query`, {
+      path: "chat:getMessagesByCustomerId",
+      args: { customerId: selectedCustomer }
+    });
+    setMessages(response.data.value);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Combine customer and user data
+  const customerList = customers?.map(customer => {
+    const user = userDetails?.find(u => u.userId === customer.userId);
+    // Get the last message specific to this customer
+    const customerLastMessage = messages.find(m => m.customerId === customer.userId);
+    
+    return {
+      id: customer.userId,
+      name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
       unreadCount: 0,
-      lastMessage: "Thank you for your help",
-      lastMessageTime: "Yesterday"
-    },
-    // Add more dummy data as needed
-  ];
+      lastMessage: customerLastMessage?.message ?? "",
+      lastMessageTime: customerLastMessage?.timestamp ?? "",
+    };
+  }) ?? [];
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -58,12 +122,12 @@ const CustomerSupport = () => {
           </div>
 
           <div className="overflow-y-auto h-[calc(100vh-300px)]">
-            {customers.map((customer) => (
+            {customerList.map((customer) => (
               <div
                 key={customer.id}
-                onClick={() => setSelectedCustomer(customer)}
+                onClick={() => setSelectedCustomer(customer.id)}
                 className={`p-4 border-b border-stroke dark:border-strokedark cursor-pointer hover:bg-gray-100 dark:hover:bg-meta-4 ${
-                  selectedCustomer?.id === customer.id
+                  selectedCustomer === customer.id
                     ? "bg-gray-100 dark:bg-meta-4"
                     : ""
                 }`}
@@ -101,26 +165,32 @@ const CustomerSupport = () => {
               {/* Chat header */}
               <div className="p-4 border-b border-stroke dark:border-strokedark">
                 <h4 className="text-xl font-semibold text-black dark:text-white">
-                  {selectedCustomer.name}
+                  {customerList.find(c => c.id === selectedCustomer)?.name}
                 </h4>
-                <p className="text-sm text-gray-500">ID: {selectedCustomer.id}</p>
+                <p className="text-sm text-gray-500">ID: {selectedCustomer}</p>
               </div>
 
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {/* Dummy messages for UI demonstration */}
-                <div className="mb-4 flex justify-start">
-                  <div className="bg-gray-100 dark:bg-meta-4 rounded-lg p-3 max-w-[70%]">
-                    <p className="text-sm">Hello, I need help with my order</p>
-                    <span className="text-xs text-gray-400">10:30 AM</span>
-                  </div>
-                </div>
-                <div className="mb-4 flex justify-end">
-                  <div className="bg-primary text-white rounded-lg p-3 max-w-[70%]">
-                    <p className="text-sm">Hi! I'd be happy to help. Could you please provide your order number?</p>
-                    <span className="text-xs text-gray-200">10:31 AM</span>
-                  </div>
-                </div>
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+                {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                  .map((msg, index) => (
+                    <div 
+                      key={index} 
+                      className={`mb-4 flex ${msg.isAdmin ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`rounded-lg p-3 max-w-[70%] ${
+                        msg.isAdmin 
+                          ? 'bg-primary text-white' 
+                          : 'bg-gray-100 dark:bg-meta-4'
+                      }`}>
+                        <p className="text-sm">{msg.message}</p>
+                        <span className={`text-xs ${msg.isAdmin ? 'text-gray-200' : 'text-gray-400'}`}>
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Message input */}
@@ -130,8 +200,14 @@ const CustomerSupport = () => {
                     type="text"
                     placeholder="Type your message..."
                     className="flex-1"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   />
-                  <Button className="text-white">
+                  <Button 
+                    className="text-white"
+                    onClick={handleSendMessage}
+                  >
                     <Send className="h-5 w-5" />
                   </Button>
                 </div>
