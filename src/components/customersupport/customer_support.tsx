@@ -24,6 +24,7 @@ const CustomerSupport = () => {
   const [userDetails, setUserDetails] = useState([]);
   const [messages, setMessages] = useState([]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [polling, setPolling] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -44,16 +45,29 @@ const CustomerSupport = () => {
     fetchCustomers();
   }, []);
 
+  const fetchMessages = async () => {
+    if (!selectedCustomer) return;
+    const response = await axios.post(`${API_BASE_URL}/query`, {
+      path: "chat:getMessagesByCustomerId",
+      args: { customerId: selectedCustomer }
+    });
+    setMessages(response.data.value);
+  };
+
   useEffect(() => {
-    const fetchMessages = async () => {
-      if (!selectedCustomer) return;
-      const response = await axios.post(`${API_BASE_URL}/query`, {
-        path: "chat:getMessagesByCustomerId",
-        args: { customerId: selectedCustomer }
-      });
-      setMessages(response.data.value);
-    };
-    fetchMessages();
+    if (selectedCustomer) {
+      fetchMessages();
+
+      const interval = setInterval(fetchMessages, 1000);
+      setPolling(interval);
+
+      return () => {
+        if (polling) {
+          clearInterval(polling);
+          setPolling(null);
+        }
+      };
+    }
   }, [selectedCustomer]);
 
   const handleSendMessage = async () => {
@@ -70,11 +84,7 @@ const CustomerSupport = () => {
     });
     
     setMessage("");
-    const response = await axios.post(`${API_BASE_URL}/query`, {
-      path: "chat:getMessagesByCustomerId",
-      args: { customerId: selectedCustomer }
-    });
-    setMessages(response.data.value);
+    await fetchMessages();
   };
 
   const scrollToBottom = () => {
