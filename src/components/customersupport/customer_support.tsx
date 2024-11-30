@@ -62,10 +62,8 @@ const CustomerSupport = () => {
       setPolling(interval);
 
       return () => {
-        if (polling) {
-          clearInterval(polling);
-          setPolling(null);
-        }
+        clearInterval(interval);
+        setPolling(null);
       };
     }
   }, [selectedCustomer]);
