@@ -25,6 +25,8 @@ const CustomerSupport = () => {
   const [messages, setMessages] = useState([]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [polling, setPolling] = useState<NodeJS.Timeout | null>(null);
+  const [customerList, setCustomerList] = useState<Customer[]>([]);
+  const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -93,20 +95,38 @@ const CustomerSupport = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Combine customer and user data
-  const customerList = customers?.map(customer => {
-    const user = userDetails?.find(u => u.userId === customer.userId);
-    // Get the last message specific to this customer
-    const customerLastMessage = messages.find(m => m.customerId === customer.userId);
+  useEffect(() => {
+    const updatedCustomerList = customers?.map(customer => {
+      const user = userDetails?.find(u => u.userId === customer.userId);
+      const customerMessages = messages.filter(m => m.customerId === customer.userId);
+      const lastMessage = customerMessages.length > 0 
+        ? customerMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+        : null;
+      
+      const lastReadTime = lastReadTimestamps[customer.userId] || '1970-01-01T00:00:00.000Z';
+      const unreadCount = customerMessages.filter(
+        msg => !msg.isAdmin && new Date(msg.timestamp) > new Date(lastReadTime)
+      ).length;
+      
+      return {
+        id: customer.userId,
+        name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+        unreadCount,
+        lastMessage: lastMessage?.message ?? "",
+        lastMessageTime: lastMessage?.timestamp ?? "",
+      };
+    }) ?? [];
     
-    return {
-      id: customer.userId,
-      name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-      unreadCount: 0,
-      lastMessage: customerLastMessage?.message ?? "",
-      lastMessageTime: customerLastMessage?.timestamp ?? "",
-    };
-  }) ?? [];
+    setCustomerList(updatedCustomerList);
+  }, [customers, userDetails, messages, lastReadTimestamps]);
+
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomer(customerId);
+    setLastReadTimestamps(prev => ({
+      ...prev,
+      [customerId]: new Date().toISOString()
+    }));
+  };
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -133,7 +153,7 @@ const CustomerSupport = () => {
             {customerList.map((customer) => (
               <div
                 key={customer.id}
-                onClick={() => setSelectedCustomer(customer.id)}
+                onClick={() => handleCustomerSelect(customer.id)}
                 className={`p-4 border-b border-stroke dark:border-strokedark cursor-pointer hover:bg-gray-100 dark:hover:bg-meta-4 ${
                   selectedCustomer === customer.id
                     ? "bg-gray-100 dark:bg-meta-4"
