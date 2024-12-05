@@ -31,7 +31,6 @@ export const addStaffMember = async (staffData: {
   role: string;
   email: string;
 }) => {
-  // First add the staff member
   const response = await axios.post(`${API_BASE_URL}/mutation`, {
     path: "staff:addStaffMember",
     args: staffData,
@@ -39,7 +38,6 @@ export const addStaffMember = async (staffData: {
 
   if (!response.data) throw new Error("Failed to add staff member");
 
-  // Send invite email
   try {
     await resend.emails.send({
       from: "onboarding@resend.dev",
