@@ -1,5 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { Car } from "@/types/car";
+import { Promotion } from "@/types/Promotion";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import { Input } from "../ui/input";
 import {
   Sheet,
@@ -9,17 +18,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import { Promotion } from "@/types/Promotion";
-import axios from "axios";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-
 interface PromotionsAddProps {
   onPromotionAdded: (promotion: Promotion) => void;
 }
@@ -266,7 +264,7 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
             <SheetHeader>
               <SheetTitle>Add New Promotion</SheetTitle>
               <SheetDescription>
-                Enter the details of the new promotion below. Click "Add" to save.
+                Enter the details of the new promotion below. Click &quot;Add&quot; to save.
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">

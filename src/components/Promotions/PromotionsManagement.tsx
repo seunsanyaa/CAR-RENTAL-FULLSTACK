@@ -1,8 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Promotion } from "@/types/Promotion";
+import axios from "axios";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
+import { Input } from "../ui/input";
 import {
   Sheet,
   SheetContent,
@@ -11,11 +15,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import { Input } from "../ui/input";
-import axios from "axios";
 import PromotionsAdd from "./promotionsAdd";
-import { Promotion } from "@/types/Promotion";
-import React from "react";
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
@@ -127,8 +127,9 @@ const PromotionsManagement = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    setEditingPromotion(prev => ({
+    const target = e.target as HTMLInputElement;
+    const { name, value, type, checked } = target;
+    setEditingPromotion((prev: Promotion) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
@@ -178,7 +179,9 @@ const PromotionsManagement = () => {
                     </td>
                     <td className="py-3 px-4">
                       {promotion.promotionImage && (
-                        <img 
+                        <Image
+                          width={100}
+                          height={100}
                           src={promotion.promotionImage} 
                           alt={promotion.promotionTitle}
                           className="w-16 h-16 object-cover rounded-md"
@@ -189,7 +192,7 @@ const PromotionsManagement = () => {
                     <td className="py-3 px-4">{promotion.promotionType}</td>
                     <td className="py-3 px-4">{promotion.promotionValue}</td>
                     <td className="py-3 px-4">
-                      {promotion.promotionType === 'permenant' ? (
+                      {promotion.promotionType === 'permanent' ? (
                         <div>
                           <div>Min. Rentals: {promotion.minimumRentals}</div>
                           <div>Min. Spent: ${promotion.minimumMoneySpent}</div>
@@ -397,10 +400,12 @@ const PromotionsManagement = () => {
                                     className="w-full p-2 border rounded"
                                   />
                                   {editingPromotion.promotionImage && (
-                                    <img 
+                                    <Image 
                                       src={editingPromotion.promotionImage} 
                                       alt="Current promotion image"
-                                      className="mt-2 h-20 object-cover rounded"
+                                      width={80}
+                                      height={80}
+                                      className="mt-2 object-cover rounded"
                                     />
                                   )}
                                 </div>
@@ -439,7 +444,7 @@ const PromotionsManagement = () => {
                             <p><strong>Value:</strong> {promotion.promotionValue}</p>
                           </div>
                           <div>
-                            {promotion.promotionType === 'permenant' ? (
+                            {promotion.promotionType === 'permanent' ? (
                               <>
                                 <p><strong>Minimum Rentals:</strong> {promotion.minimumRentals}</p>
                                 <p><strong>Minimum Money Spent:</strong> ${promotion.minimumMoneySpent}</p>

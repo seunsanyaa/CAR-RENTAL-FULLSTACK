@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -11,7 +12,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import axios from "axios";
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
@@ -120,7 +120,7 @@ const PaymentTransactions = () => {
     if (!editingTransaction) return;
     const { name, value } = e.target;
     
-    setEditingTransaction(prev => ({ ...prev, [name]: value }));
+    // setEditingTransaction(prev => ({ ...prev, [name]: value }));
 
     // If bookingId changes, fetch new booking details
     if (name === 'bookingId') {
@@ -140,13 +140,13 @@ const PaymentTransactions = () => {
           
           const userData = userResponse.data.value;
           
-          setEditingTransaction(prev => ({
-            ...prev,
-            bookingDetails: {
-              ...bookingData,
-              customerName: userData ? `${userData.firstName} ${userData.lastName}` : 'N/A'
-            }
-          }));
+          // setEditingTransaction(prev => ({
+          //   ...prev,
+          //   bookingDetails: {
+          //     ...bookingData,
+          //     customerName: userData ? `${userData.firstName} ${userData.lastName}` : 'N/A'
+          //   }
+          // }));
         }
       } catch (err) {
         console.error('Error fetching booking details:', err);
@@ -170,45 +170,45 @@ const PaymentTransactions = () => {
         
         // Calculate amount difference
         const oldAmount = transactions.find(t => t._id === editingTransaction._id)?.amount || 0;
-        const amountDifference = parseFloat(editingTransaction.amount) - oldAmount;
+        // const amountDifference = parseFloat(editingTransaction.amount) - oldAmount;
 
-        // Update payment
-        const response = await axios.post(`${API_BASE_URL}/mutation`, {
-          path: "payment:editPayment",
-          args: {
-            paymentId: editingTransaction._id,
-            bookingId: editingTransaction.bookingId,
-            amount: parseFloat(editingTransaction.amount),
-            paymentDate: editingTransaction.paymentDate,
-            paymentType: editingTransaction.paymentType,
-          }
-        });
+        // // Update payment
+        // const response = await axios.post(`${API_BASE_URL}/mutation`, {
+        //   path: "payment:editPayment",
+        //   args: {
+        //     paymentId: editingTransaction._id,
+        //     bookingId: editingTransaction.bookingId,
+        //     amount: parseFloat(editingTransaction.amount),
+        //     paymentDate: editingTransaction.paymentDate,
+        //     paymentType: editingTransaction.paymentType,
+        //   }
+        // });
 
-        if (response.data) {
-          // Calculate new status and paid amount
-          const newPaidAmount = (bookingDetails.paidAmount || 0) + amountDifference;
-          let newStatus = bookingDetails.status;
+        // if (response.data) {
+        //   // Calculate new status and paid amount
+        //   const newPaidAmount = (bookingDetails.paidAmount || 0) + amountDifference;
+        //   let newStatus = bookingDetails.status;
 
-          if (bookingDetails.status === 'pending') {
-            newStatus = 'inprogress';
-          } else if (newPaidAmount >= bookingDetails.totalCost) {
-            newStatus = 'completed';
-          }
+        //   if (bookingDetails.status === 'pending') {
+        //     newStatus = 'inprogress';
+        //   } else if (newPaidAmount >= bookingDetails.totalCost) {
+        //     newStatus = 'completed';
+        //   }
 
-          // Update booking status and paid amount
-          await axios.post(`${API_BASE_URL}/mutation`, {
-            path: "bookings:updateBooking",
-            args: {
-              id: editingTransaction.bookingId,
-              status: newStatus,
-              paidAmount: newPaidAmount
-            }
-          });
+        //   // Update booking status and paid amount
+        //   await axios.post(`${API_BASE_URL}/mutation`, {
+        //     path: "bookings:updateBooking",
+        //     args: {
+        //       id: editingTransaction.bookingId,
+        //       status: newStatus,
+        //       paidAmount: newPaidAmount
+        //     }
+        //   });
 
-          fetchPayments();
-          setEditingTransaction(null);
-          setIsEditingTransaction(false);
-        }
+        //   fetchPayments();
+        //   setEditingTransaction(null);
+        //   setIsEditingTransaction(false);
+        // }
       } catch (err) {
         console.error('Error updating payment:', err);
         setError('Failed to update payment. Please try again.');

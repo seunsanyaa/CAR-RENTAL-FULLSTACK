@@ -379,7 +379,7 @@ const BookingsTable = () => {
                           <SheetHeader>
                             <SheetTitle>Edit Booking</SheetTitle>
                             <SheetDescription>
-                              Make changes to the booking details here. Click save when you're done.
+                              Make changes to the booking details here. Click &quot;Save&quot; when you&apos;re done.
                             </SheetDescription>
                           </SheetHeader>
                           {editingBooking && booking._id === editingBooking._id && (

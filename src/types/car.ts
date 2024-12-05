@@ -1,4 +1,5 @@
 export interface Car {
+  _id: string;
   model: string;
   color: string;
   maker: string;

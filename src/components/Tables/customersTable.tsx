@@ -123,17 +123,17 @@ const CustomersTable = () => {
         });
 
         if (userResponse.data && customerResponse.data) {
-          setCustomersData(customersData.map((customer) =>
-            customer.userId === editingCustomer.userId ? {
-              ...editingCustomer,
-              user: {
-                ...editingCustomer.user,
-                email: editingCustomer.user?.email,
-                firstName: editingCustomer.user?.firstName,
-                lastName: editingCustomer.user?.lastName,
-              }
-            } : customer
-          ));
+          // setCustomersData(customersData.map((customer) =>
+          //   customer.userId === editingCustomer.userId ? {
+          //     ...editingCustomer,
+          //     user: {
+          //       ...editingCustomer.user,
+          //       email: editingCustomer.user?.email,
+          //       firstName: editingCustomer.user?.firstName,
+          //       lastName: editingCustomer.user?.lastName,
+          //     }
+          //   } : customer
+          // ));
           setEditingCustomer(null);
         }
       } catch (err) {
@@ -300,7 +300,7 @@ const CustomersTable = () => {
               <SheetHeader>
                 <SheetTitle>Add New Customer</SheetTitle>
                 <SheetDescription>
-                  Enter the details of the new customer below. Click "Add" to save.
+                  Enter the details of the new customer below. Click &quot;Add&quot; to save.
                 </SheetDescription>
               </SheetHeader>
               <form onSubmit={handleAddCustomerSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
@@ -459,7 +459,7 @@ const CustomersTable = () => {
                             <SheetHeader>
                               <SheetTitle>Edit Customer</SheetTitle>
                               <SheetDescription>
-                                Make changes to the customer details here. Click save when you're done.
+                                Make changes to the customer details here. Click &quot;Save&quot; when you&apos;re done.
                               </SheetDescription>
                             </SheetHeader>
                             {editingCustomer && customer.userId === editingCustomer.userId && (
@@ -472,7 +472,7 @@ const CustomersTable = () => {
                                     value={editingCustomer.user?.firstName || ''}
                                     onChange={(e) => setEditingCustomer({
                                       ...editingCustomer,
-                                      user: { ...editingCustomer.user, firstName: e.target.value }
+                                      user: { ...editingCustomer.user, firstName: e.target.value, staff: false }
                                     })}
                                   />
                                 </div>
@@ -484,7 +484,7 @@ const CustomersTable = () => {
                                     value={editingCustomer.user?.lastName || ''}
                                     onChange={(e) => setEditingCustomer({
                                       ...editingCustomer,
-                                      user: { ...editingCustomer.user, lastName: e.target.value }
+                                      // user: { ...editingCustomer.user, lastName: e.target.value, staff: false }
                                     })}
                                   />
                                 </div>
@@ -495,10 +495,10 @@ const CustomersTable = () => {
                                     name="email"
                                     type="email"
                                     value={editingCustomer.user?.email || ''}
-                                    onChange={(e) => setEditingCustomer({
-                                      ...editingCustomer,
-                                      user: { ...editingCustomer.user, email: e.target.value }
-                                    })}
+                                    // onChange={(e) => setEditingCustomer({
+                                    //   ...editingCustomer,
+                                    //   user: { ...editingCustomer.user, email: e.target.value, staff: false }
+                                    // })}
                                   />
                                 </div>
                                 <div>

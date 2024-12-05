@@ -268,7 +268,7 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
           <SheetHeader>
             <SheetTitle>Add New Car</SheetTitle>
             <SheetDescription>
-              Enter the details of the new car below. Click "Add" to save.
+              Enter the details of the new car below. Click &quot;Add&quot; to save.
             </SheetDescription>
           </SheetHeader>
           <form

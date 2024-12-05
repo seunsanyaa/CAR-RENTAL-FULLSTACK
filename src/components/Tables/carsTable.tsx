@@ -238,7 +238,7 @@ const CarsTable = () => {
                             <SheetHeader>
                               <SheetTitle>Edit Car</SheetTitle>
                               <SheetDescription>
-                                Make changes to the car details below. Click "Save" when you're done.
+                                Make changes to the car details below. Click &quot;Save&quot; when you&apos;re done.
                               </SheetDescription>
                             </SheetHeader>
                             {editingCar && (
@@ -387,7 +387,7 @@ const CarsTable = () => {
                           <div>
                             <p><strong>Available:</strong> {car.available ? "Yes" : "No"}</p>
                             <p><strong>Disabled:</strong> {car.disabled ? "Yes" : "No"}</p>
-                            <p><strong>Categories:</strong> {car.categories?.join(", ") || "No categories"}</p>
+                            {/* <p><strong>Categories:</strong> {car.categories?.join(", ") || "No categories"}</p> */}
                           </div>
                         </div>
                       </td>

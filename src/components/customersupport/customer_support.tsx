@@ -1,10 +1,17 @@
 "use client"
 
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Search, Send } from "lucide-react";
-import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Search, Send } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+
+interface CustomerData {
+  userId: string;
+  
+
+  // ... other customer fields
+}
 
 interface Customer {
   id: string;
@@ -21,7 +28,7 @@ const CustomerSupport = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [customers, setCustomers] = useState([]);
-  const [userDetails, setUserDetails] = useState([]);
+  const [userDetails, setUserDetails] = useState<[]>([]);
   const [messages, setMessages] = useState([]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -86,19 +93,19 @@ const CustomerSupport = () => {
   }, [messages]);
 
   // Combine customer and user data
-  const customerList = customers?.map(customer => {
-    const user = userDetails?.find(u => u.userId === customer.userId);
-    // Get the last message specific to this customer
-    const customerLastMessage = messages.find(m => m.customerId === customer.userId);
+  // const customerList = customers?.map((customer: CustomerData) => {
+  //   const user = userDetails?.find(u => u.userId === customer.userId);
+  //   // Get the last message specific to this customer
+  //   const customerLastMessage = messages.find((m: Message) => m.customerId === customer.userId);
     
-    return {
-      id: customer.userId,
-      name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-      unreadCount: 0,
-      lastMessage: customerLastMessage?.message ?? "",
-      lastMessageTime: customerLastMessage?.timestamp ?? "",
-    };
-  }) ?? [];
+  //   return {
+  //     id: customer.userId,
+  //     name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+  //     unreadCount: 0,
+  //     lastMessage: customerLastMessage?.message ?? "",
+  //     lastMessageTime: customerLastMessage?.timestamp ?? "",
+  //   };
+  // }) ?? [];
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -121,7 +128,7 @@ const CustomerSupport = () => {
             </div>
           </div>
 
-          <div className="overflow-y-auto h-[calc(100vh-300px)]">
+          {/* <div className="overflow-y-auto h-[calc(100vh-300px)]">
             {customerList.map((customer) => (
               <div
                 key={customer.id}
@@ -155,7 +162,7 @@ const CustomerSupport = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
 
         {/* Right side - Chat window */}
@@ -165,13 +172,13 @@ const CustomerSupport = () => {
               {/* Chat header */}
               <div className="p-4 border-b border-stroke dark:border-strokedark">
                 <h4 className="text-xl font-semibold text-black dark:text-white">
-                  {customerList.find(c => c.id === selectedCustomer)?.name}
+                  {/* {customerList.find(c => c.id === selectedCustomer)?.name} */}
                 </h4>
                 <p className="text-sm text-gray-500">ID: {selectedCustomer}</p>
               </div>
 
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+              {/* <div className="flex-1 overflow-y-auto p-4 flex flex-col">
                 {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                   .map((msg, index) => (
                     <div 
@@ -191,7 +198,7 @@ const CustomerSupport = () => {
                     </div>
                   ))}
                 <div ref={messagesEndRef} />
-              </div>
+              </div> */}
 
               {/* Message input */}
               <div className="p-4 border-t border-stroke dark:border-strokedark">
