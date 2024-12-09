@@ -1,3 +1,5 @@
+import { User } from "./staff";
+
 export interface Customer {
   userId: string;
   nationality: string;
@@ -6,6 +8,7 @@ export interface Customer {
   licenseNumber: string;
   address: string;
   dateOfBirth: string;
+  user?: User;
 }
 
 // You can add additional customer-related interfaces or types here if needed

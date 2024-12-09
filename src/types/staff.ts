@@ -9,8 +9,9 @@ export interface StaffMember {
 // ... existing code ...
 
 export interface User {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   // Add other user properties as needed
 }
 
