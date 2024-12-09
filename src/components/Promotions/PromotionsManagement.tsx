@@ -16,6 +16,7 @@ import axios from "axios";
 import PromotionsAdd from "./promotionsAdd";
 import { Promotion } from "@/types/Promotion";
 import React from "react";
+import Image from "next/image";
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
@@ -127,10 +128,11 @@ const PromotionsManagement = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    setEditingPromotion(prev => ({
+    const { name, value } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setEditingPromotion((prev: Promotion) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: name === 'specificTarget' ? value.split(',').map(item => item.trim()) : value
     }));
   };
 
@@ -178,10 +180,12 @@ const PromotionsManagement = () => {
                     </td>
                     <td className="py-3 px-4">
                       {promotion.promotionImage && (
-                        <img 
+                        <Image 
                           src={promotion.promotionImage} 
                           alt={promotion.promotionTitle}
                           className="w-16 h-16 object-cover rounded-md"
+                          width={200}
+                          height={200}
                         />
                       )}
                     </td>
@@ -397,10 +401,12 @@ const PromotionsManagement = () => {
                                     className="w-full p-2 border rounded"
                                   />
                                   {editingPromotion.promotionImage && (
-                                    <img 
+                                    <Image 
                                       src={editingPromotion.promotionImage} 
                                       alt="Current promotion image"
                                       className="mt-2 h-20 object-cover rounded"
+                                      width={200}
+                                      height={200}
                                     />
                                   )}
                                 </div>

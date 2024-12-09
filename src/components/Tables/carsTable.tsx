@@ -1,8 +1,10 @@
 "use client"
 
+import CarAdd from "@/components/Tables/CarAdd"; // Import the new CarAdd component
 import { Car } from "@/types/car";
 import axios from "axios";
-import { Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy } from "lucide-react";
+import Image from 'next/image';
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
@@ -15,8 +17,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import Image from 'next/image';
-import CarAdd from "@/components/Tables/CarAdd"; // Import the new CarAdd component
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
@@ -238,7 +238,7 @@ const CarsTable = () => {
                             <SheetHeader>
                               <SheetTitle>Edit Car</SheetTitle>
                               <SheetDescription>
-                                Make changes to the car details below. Click "Save" when you're done.
+                                Make changes to the car details below. Click &quot;Save&quot; when you&apos;re done.
                               </SheetDescription>
                             </SheetHeader>
                             {editingCar && (

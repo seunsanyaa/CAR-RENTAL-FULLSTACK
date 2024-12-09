@@ -1,4 +1,5 @@
 export interface Car {
+  _id: string;
   model: string;
   color: string;
   maker: string;
@@ -8,6 +9,7 @@ export interface Car {
   year: number;
   disabled: boolean;
   registrationNumber: string;
+  categories?: string[];
   pictures: string[];
   pricePerDay: number;
 }
