@@ -379,12 +379,11 @@ const BookingsTable = () => {
                           <SheetHeader>
                             <SheetTitle>Edit Booking</SheetTitle>
                             <SheetDescription>
-                              Make changes to the booking details here. Click &quot;Save&quot; when you're done.
+                              Make changes to the booking details here. Click &quot;Save&quot; when you&apos;re done.
                             </SheetDescription>
                           </SheetHeader>
                           {editingBooking && booking._id === editingBooking._id && (
                             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                              {/* Add input fields for all booking properties */}
                               <div>
                                 <label htmlFor="customerId" className="text-sm font-medium">
                                   Customer ID
