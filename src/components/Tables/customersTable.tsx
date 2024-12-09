@@ -246,8 +246,8 @@ const CustomersTable = () => {
             body: JSON.stringify({
               to: addedCustomer.email,
               subject: 'Welcome to Our Service!',
-              text: `Hello ${addedCustomer.user.firstName},\n\nWelcome to our service! We're excited to have you as a customer.\n\nBest regards,\nYour Company`,
-              html: `<p>Hello ${addedCustomer.user.firstName},</p><p>Welcome to our service! We're excited to have you as a customer.</p><p>Best regards,<br>Your Company</p>`,
+              text: `Hello ${addedCustomer.user.firstName},\n\nWelcome to our service! We&apos;re excited to have you as a customer.\n\nBest regards,\nYour Company`,
+              html: `<p>Hello ${addedCustomer.user.firstName},</p><p>Welcome to our service! We&apos;re excited to have you as a customer.</p><p>Best regards,<br>Your Company</p>`,
             }),
           });
           console.log('Welcome email sent successfully');
@@ -300,7 +300,7 @@ const CustomersTable = () => {
               <SheetHeader>
                 <SheetTitle>Add New Customer</SheetTitle>
                 <SheetDescription>
-                  Enter the details of the new customer below. Click "Add" to save.
+                  Enter the details of the new customer below. Click &quot;Add&quot; to save.
                 </SheetDescription>
               </SheetHeader>
               <form onSubmit={handleAddCustomerSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
@@ -459,7 +459,7 @@ const CustomersTable = () => {
                             <SheetHeader>
                               <SheetTitle>Edit Customer</SheetTitle>
                               <SheetDescription>
-                                Make changes to the customer details here. Click save when you're done.
+                                Make changes to the customer details here. Click &quot;save&quot; when you&apos;re done.
                               </SheetDescription>
                             </SheetHeader>
                             {editingCustomer && customer.userId === editingCustomer.userId && (
