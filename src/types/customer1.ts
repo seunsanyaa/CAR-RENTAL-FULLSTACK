@@ -9,6 +9,12 @@ export interface Customer {
   address: string;
   dateOfBirth: string;
   user?: User;
+
+  id?: string;
+  name?: string;
+  unreadCount?: number;
+  lastMessage?: string;
+  lastMessageTime?: string;
 }
 
 // You can add additional customer-related interfaces or types here if needed

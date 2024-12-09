@@ -1,17 +1,33 @@
 "use client"
 
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Search, Send } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { Customer } from "@/types/customer1";
 import axios from "axios";
+import { Search, Send } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
-interface Customer {
-  id: string;
-  name: string;
-  unreadCount: number;
-  lastMessage: string;
-  lastMessageTime: string;
+// interface Customer {
+//   id: string;
+//   name: string;
+//   unreadCount: number;
+//   lastMessage: string;
+//   lastMessageTime: string;
+// }
+
+interface UserDetails {
+  userId: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  // Add other relevant user fields as needed
+}
+
+interface Message {
+  customerId: string;
+  message: string;
+  isAdmin: boolean;
+  timestamp: string;
 }
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
@@ -20,9 +36,9 @@ const CustomerSupport = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [customers, setCustomers] = useState([]);
-  const [userDetails, setUserDetails] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [userDetails, setUserDetails] = useState<UserDetails[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [polling, setPolling] = useState<NodeJS.Timeout | null>(null);
   const [customerList, setCustomerList] = useState<Customer[]>([]);
@@ -97,7 +113,7 @@ const CustomerSupport = () => {
 
   useEffect(() => {
     const updatedCustomerList = customers?.map(customer => {
-      const user = userDetails?.find(u => u.userId === customer.userId);
+      const user = userDetails?.find((u: UserDetails) => u.userId === customer.userId);
       const customerMessages = messages.filter(m => m.customerId === customer.userId);
       const lastMessage = customerMessages.length > 0 
         ? customerMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
@@ -117,7 +133,7 @@ const CustomerSupport = () => {
       };
     }) ?? [];
     
-    setCustomerList(updatedCustomerList);
+    setCustomerList(updatedCustomerList as Customer[]);
   }, [customers, userDetails, messages, lastReadTimestamps]);
 
   const handleCustomerSelect = (customerId: string) => {
@@ -153,7 +169,7 @@ const CustomerSupport = () => {
             {customerList.map((customer) => (
               <div
                 key={customer.id}
-                onClick={() => handleCustomerSelect(customer.id)}
+                onClick={() => handleCustomerSelect(customer.id ?? '')}
                 className={`p-4 border-b border-stroke dark:border-strokedark cursor-pointer hover:bg-gray-100 dark:hover:bg-meta-4 ${
                   selectedCustomer === customer.id
                     ? "bg-gray-100 dark:bg-meta-4"
@@ -167,7 +183,7 @@ const CustomerSupport = () => {
                     </h5>
                     <p className="text-sm text-gray-500">ID: {customer.id}</p>
                   </div>
-                  {customer.unreadCount > 0 && (
+                  {customer.unreadCount && customer.unreadCount > 0 && (
                     <span className="bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {customer.unreadCount}
                     </span>
