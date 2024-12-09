@@ -17,8 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { Car } from "@/types/car";
+import Image from "next/image";
 
 interface PromotionsAddProps {
   onPromotionAdded: (promotion: Promotion) => void;
@@ -266,7 +266,7 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
             <SheetHeader>
               <SheetTitle>Add New Promotion</SheetTitle>
               <SheetDescription>
-                Enter the details of the new promotion below. Click "Add" to save.
+                Enter the details of the new promotion below. Click &quot;Add&quot; to save.
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
@@ -532,10 +532,12 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                 onClick={() => handleCarSelection(car._id)}
               >
                 <div className="aspect-square relative mb-2">
-                  <img
+                  <Image
                     src={car.pictures?.[0] || '/placeholder-car.jpg'}
                     alt={`${car.maker} ${car.model}`}
                     className="object-cover w-full h-full rounded-md"
+                    width={200}
+                    height={200}
                   />
                 </div>
                 <div className="text-sm">
