@@ -120,7 +120,9 @@ const PaymentTransactions = () => {
     if (!editingTransaction) return;
     const { name, value } = e.target;
     
-    setEditingTransaction(prev => ({ ...prev, [name]: value }));
+    setEditingTransaction(prev => 
+      prev ? { ...prev, [name]: value } as PaymentTransaction : null
+    );
 
     // If bookingId changes, fetch new booking details
     if (name === 'bookingId') {
@@ -140,13 +142,16 @@ const PaymentTransactions = () => {
           
           const userData = userResponse.data.value;
           
-          setEditingTransaction(prev => ({
-            ...prev,
-            bookingDetails: {
-              ...bookingData,
-              customerName: userData ? `${userData.firstName} ${userData.lastName}` : 'N/A'
-            }
-          }));
+          setEditingTransaction(prev => 
+            prev ? {
+              ...prev,
+              bookingDetails: {
+                ...prev.bookingDetails,
+                ...bookingData,
+                customerName: userData ? `${userData.firstName} ${userData.lastName}` : 'N/A'
+              }
+            } as PaymentTransaction : null
+          );
         }
       } catch (err) {
         console.error('Error fetching booking details:', err);
@@ -170,7 +175,7 @@ const PaymentTransactions = () => {
         
         // Calculate amount difference
         const oldAmount = transactions.find(t => t._id === editingTransaction._id)?.amount || 0;
-        const amountDifference = parseFloat(editingTransaction.amount) - oldAmount;
+        const amountDifference = parseFloat(editingTransaction.amount.toString()) - oldAmount;
 
         // Update payment
         const response = await axios.post(`${API_BASE_URL}/mutation`, {
@@ -178,7 +183,7 @@ const PaymentTransactions = () => {
           args: {
             paymentId: editingTransaction._id,
             bookingId: editingTransaction.bookingId,
-            amount: parseFloat(editingTransaction.amount),
+            amount: editingTransaction.amount.toString(),
             paymentDate: editingTransaction.paymentDate,
             paymentType: editingTransaction.paymentType,
           }
