@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import axios from "axios";
+import { useQuery } from '@tanstack/react-query';
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
@@ -40,10 +41,7 @@ interface PaymentTransaction {
 }
 
 const PaymentTransactions = () => {
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<PaymentTransaction | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isEditingTransaction, setIsEditingTransaction] = useState(false);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -53,63 +51,60 @@ const PaymentTransactions = () => {
     paymentType: "",
   });
   const [newPaymentBookingDetails, setNewPaymentBookingDetails] = useState<any>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
 
-  const fetchPayments = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.post(`${API_BASE_URL}/query`, {
-        path: "payment:getAllPayments",
-        args: {}
+  const fetchPaymentWithDetails = async (payment: PaymentTransaction) => {
+    const bookingResponse = await axios.post(`${API_BASE_URL}/query`, {
+      path: "bookings:getBookingDetails",
+      args: { bookingId: payment.bookingId }
+    });
+    
+    const bookingDetails = bookingResponse.data.value;
+    
+    if (bookingDetails?.customerId) {
+      const userResponse = await axios.post(`${API_BASE_URL}/query`, {
+        path: "users:getFullUser",
+        args: { userId: bookingDetails.customerId }
       });
-
-      if (response.data) {
-        const paymentsWithDetails = await Promise.all(
-          response.data.value.map(async (payment: PaymentTransaction) => {
-            const bookingResponse = await axios.post(`${API_BASE_URL}/query`, {
-              path: "bookings:getBookingDetails",
-              args: { bookingId: payment.bookingId }
-            });
-            
-            const bookingDetails = bookingResponse.data.value;
-            
-            if (bookingDetails?.customerId) {
-              const customerResponse = await axios.post(`${API_BASE_URL}/query`, {
-                path: "customers:getCustomerByUserId",
-                args: { userId: bookingDetails.customerId }
-              });
-              
-              const userResponse = await axios.post(`${API_BASE_URL}/query`, {
-                path: "users:getFullUser",
-                args: { userId: bookingDetails.customerId }
-              });
-              
-              const user = userResponse.data.value;
-              bookingDetails.customerName = user ? 
-                `${user.firstName} ${user.lastName}` : 
-                'N/A';
-            }
-            
-            return {
-              ...payment,
-              bookingDetails
-            };
-          })
-        );
-        
-        setTransactions(paymentsWithDetails);
-      }
-    } catch (err) {
-      console.error('Error fetching payments:', err);
-      setError('Failed to fetch payments. Please try again.');
-    } finally {
-      setLoading(false);
+      
+      const user = userResponse.data.value;
+      bookingDetails.customerName = user ? 
+        `${user.firstName} ${user.lastName}` : 
+        'N/A';
     }
+    
+    return {
+      ...payment,
+      bookingDetails
+    };
   };
 
-  useEffect(() => {
-    fetchPayments();
-  }, []);
+  const fetchAllPayments = async () => {
+    const response = await axios.post(`${API_BASE_URL}/query`, {
+      path: "payment:getAllPayments",
+      args: {}
+    });
+
+    if (!response.data) return [];
+
+    const paymentsWithDetails = await Promise.all(
+      response.data.value.map(fetchPaymentWithDetails)
+    );
+    
+    return paymentsWithDetails;
+  };
+
+  const { 
+    data: transactions = [], 
+    isLoading, 
+    isError, 
+    error,
+    refetch: fetchPayments
+  } = useQuery({
+    queryKey: ['payments'],
+    queryFn: fetchAllPayments,
+  });
 
   const handleEdit = (transaction: PaymentTransaction) => {
     setEditingTransaction({ ...transaction });
@@ -162,8 +157,8 @@ const PaymentTransactions = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (editingTransaction) {
-      setLoading(true);
-      setError(null);
+      setLocalLoading(true);
+      setLocalError(null);
       try {
         // Get current booking details
         const bookingResponse = await axios.post(`${API_BASE_URL}/query`, {
@@ -210,35 +205,35 @@ const PaymentTransactions = () => {
             }
           });
 
-          fetchPayments();
+          // fetchPayments();
           setEditingTransaction(null);
           setIsEditingTransaction(false);
         }
       } catch (err) {
         console.error('Error updating payment:', err);
-        setError('Failed to update payment. Please try again.');
+        setLocalError('Failed to update payment. Please try again.');
       } finally {
-        setLoading(false);
+        setLocalLoading(false);
       }
     }
   };
 
   const handleDelete = async (receiptNumber: string) => {
-    setLoading(true);
-    setError(null);
+    setLocalLoading(true);
+    setLocalError(null);
     try {
       const response = await axios.post(`${API_BASE_URL}/mutation`, {
         path: "payment:RefundPayment",
         args: { receiptNumber }
       });
       if (response.data) {
-        fetchPayments();
+        // fetchPayments();
       }
     } catch (err) {
       console.error('Error deleting payment:', err);
-      setError('Failed to delete payment. Please try again.');
+      setLocalError('Failed to delete payment. Please try again.');
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
   };
 
@@ -281,8 +276,8 @@ const PaymentTransactions = () => {
 
   const handleAddPayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setLocalLoading(true);
+    setLocalError(null);
 
     try {
       // Get current booking details
@@ -325,7 +320,7 @@ const PaymentTransactions = () => {
           }
         });
 
-        fetchPayments();
+        // fetchPayments();
         setIsAddingPayment(false);
         setNewPayment({
           bookingId: "",
@@ -337,9 +332,9 @@ const PaymentTransactions = () => {
       }
     } catch (err) {
       console.error('Error creating payment:', err);
-      setError('Failed to create payment. Please try again.');
+      setLocalError('Failed to create payment. Please try again.');
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
   };
 
@@ -421,24 +416,24 @@ const PaymentTransactions = () => {
                 </select>
               </div>
 
-              {error && <p className="text-red-500">{error}</p>}
+              {localError && <p className="text-red-500">{localError}</p>}
 
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={localLoading}
               >
-                {loading ? "Creating..." : "Create Payment"}
+                {localLoading ? "Creating..." : "Create Payment"}
               </Button>
             </form>
           </SheetContent>
         </Sheet>
       </div>
 
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      {localLoading && <p>Loading...</p>}
+      {localError && <p className="text-red-500">{localError}</p>}
 
-      {!loading && !error && (
+      {!localLoading && !localError && (
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
             <thead>
@@ -539,14 +534,14 @@ const PaymentTransactions = () => {
                                 </select>
                               </div>
 
-                              {error && <p className="text-red-500">{error}</p>}
+                              {localError && <p className="text-red-500">{localError}</p>}
 
                               <Button
                                 type="submit"
                                 className="w-full"
-                                disabled={loading}
+                                disabled={localLoading}
                               >
-                                {loading ? "Saving..." : "Save Changes"}
+                                {localLoading ? "Saving..." : "Save Changes"}
                               </Button>
                             </form>
                           )}
