@@ -28,6 +28,8 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
     maker: "",
     lastMaintenanceDate: "",
     available: false,
+    disabled: false,
+    golden: false,
     year: 0,
     registrationNumber: "",
     pictures: [] as File[],
@@ -213,6 +215,8 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
         ...newCar,
         pictures: uploadedImages,
         categories: filteredCategories,
+        disabled: newCar.disabled,
+        golden: newCar.golden,
       };
 
       // Make API call using the same pattern as staffTable
@@ -240,6 +244,8 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
           maker: "",
           lastMaintenanceDate: "",
           available: false,
+          disabled: false,
+          golden: false,
           year: 0,
           registrationNumber: "",
           pictures: [],
@@ -465,17 +471,37 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="flex items-center">
-              <label htmlFor="available" className="text-sm font-medium mr-2">
-                Available
-              </label>
-              <input
-                id="available"
-                name="available"
-                type="checkbox"
-                checked={newCar.available}
-                onChange={handleInputChange}
-              />
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <label htmlFor="available" className="text-sm font-medium mr-2">Available</label>
+                <input
+                  id="available"
+                  name="available"
+                  type="checkbox"
+                  checked={newCar.available}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="flex items-center">
+                <label htmlFor="disabled" className="text-sm font-medium mr-2">Disabled</label>
+                <input
+                  id="disabled"
+                  name="disabled"
+                  type="checkbox"
+                  checked={newCar.disabled}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div className="flex items-center">
+                <label htmlFor="golden" className="text-sm font-medium mr-2">Golden Member</label>
+                <input
+                  id="golden"
+                  name="golden"
+                  type="checkbox"
+                  checked={newCar.golden}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="registrationNumber" className="text-sm font-medium">
