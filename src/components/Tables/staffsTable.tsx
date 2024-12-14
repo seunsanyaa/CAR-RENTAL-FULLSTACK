@@ -161,6 +161,9 @@ const StaffTable = () => {
       });
 
       if (response.data) {
+
+
+  
         const addedStaff = response.data;
         setStaffData([...staffData, addedStaff]);
         setNewStaff({

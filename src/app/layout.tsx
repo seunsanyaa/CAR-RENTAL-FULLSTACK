@@ -3,6 +3,7 @@ import "../../node_modules/flatpickr/dist/flatpickr.min.css";
 import "../../node_modules/jsvectormap/dist/jsvectormap.css";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
+import axios from 'axios';
 
 import Loader from "@/components/common/Loader";
 import "@/css/satoshi.css";
@@ -26,27 +27,23 @@ export default function RootLayout({
       const token = searchParams?.get('token');
       
       if (!token) {
-        // Redirect to your login domain
         window.location.href = 'https://your-auth-domain.com/login';
         return;
       }
 
       try {
-        // Verify token with your backend
-        const response = await fetch(`${API_BASE_URL}/verifyToken`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token }),
+        // Verify token using the verify:verifyStaffToken endpoint
+        const response = await axios.post(`${API_BASE_URL}/query`, {
+          path: "verify:verifyStaffToken",
+          args: { token }
         });
 
-        if (!response.ok) {
+        if (!response.data || !response.data.valid) {
           window.location.href = 'https://your-auth-domain.com/login';
           return;
         }
 
-        // If valid, you could store it in a cookie for subsequent requests
+        // If valid, store token in cookie
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         setLoading(false);
       } catch (error) {
