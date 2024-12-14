@@ -45,7 +45,7 @@ const [dailyVisitors, setDailyVisitors] = useState([]);
     {
       id: "daily-payment-counts",
       data: dailyVisitors.map((item: any) => ({
-        x: new Date(item.x).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        x: new Date(item.x).toLocaleDateString('en-US', { weekday: 'short' }),
         y: item.y
       }))
     }
@@ -72,6 +72,7 @@ const [dailyVisitors, setDailyVisitors] = useState([]);
           tickSize: 0,
           tickValues: 5,
           tickPadding: 16,
+          format: (value) => `$${value}`
         }}
         colors={["#2563eb"]}
         pointSize={6}
@@ -158,6 +159,61 @@ function BarChart({ className, ...props }: BarChartProps) {
 
 
 const Analytic = () => {
+  const [carsCount, setCarsCount] = useState(0);
+  const [customerCount, setCustomerCount] = useState(0);
+  const [staffCount, setStaffCount] = useState(0);
+
+  const fetchCarsCount = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "car:getNumberOfCars",
+        args: {}
+      });
+      
+      if (response.data) {
+        setCarsCount(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching cars count:', err);
+    }
+  };
+
+  const fetchCustomerCount = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "customers:getCustomerCount",
+        args: {}
+      });
+      
+      if (response.data) {
+        setCustomerCount(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching customer count:', err);
+    }
+  };
+
+  const fetchStaffCount = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "staff:getStaffCount",
+        args: {}
+      });
+      
+      if (response.data) {
+        setStaffCount(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching staff count:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCarsCount();
+    fetchCustomerCount();
+    fetchStaffCount();
+  }, []);
+
   return (
     <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
     <div className="grid gap-8">
@@ -197,7 +253,7 @@ const Analytic = () => {
                 <CardTitle>Customers</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">2,345</div>
+                <div className="text-4xl font-bold">{customerCount}</div>
                 <div className="text-muted-foreground">Total Registered Customers</div>
               </CardContent>
             </Card>
@@ -206,7 +262,7 @@ const Analytic = () => {
                 <CardTitle>Cars</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">125</div>
+                <div className="text-4xl font-bold">{carsCount}</div>
                 <div className="text-muted-foreground">Total Cars</div>
               </CardContent>
             </Card>
@@ -215,7 +271,7 @@ const Analytic = () => {
                 <CardTitle>Employees</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">45</div>
+                <div className="text-4xl font-bold">{staffCount}</div>
                 <div className="text-muted-foreground">Total Employees</div>
               </CardContent>
             </Card>
