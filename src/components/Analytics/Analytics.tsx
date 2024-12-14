@@ -3,39 +3,58 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { BookingsChart } from "./Bookings";
 
 interface LineChartProps {
   className?: string;
 }
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
-function LineChart({ className, ...props }: LineChartProps) {
+
+function PaymentsChart({ className, ...props }: LineChartProps) {
+const [dailyVisitors, setDailyVisitors] = useState([]);
+
+
+  const fetchDailyVisitors = async () => {
+   
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "payment:getDailyPaymentStats",
+        args: {}
+      });
+      console.log(response);
+      if (response.data) {
+
+        setDailyVisitors(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+    } 
+  };
+
+  useEffect(() => {
+    fetchDailyVisitors();
+  }, []);
+
+  console.log(dailyVisitors,'weeekly');
+
+  // Transform dailyVisitors data for the chart
+  const chartData = [
+    {
+      id: "daily-payment-counts",
+      data: dailyVisitors.map((item: any) => ({
+        x: new Date(item.x).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        y: item.y
+      }))
+    }
+  ];
+
   return (
-    (<div className={className} {...props}>
+    <div className={className} {...props}>
       <ResponsiveLine
-        data={[
-          {
-            id: "Desktop",
-            data: [
-              { x: "Jan", y: 43 },
-              { x: "Feb", y: 137 },
-              { x: "Mar", y: 61 },
-              { x: "Apr", y: 145 },
-              { x: "May", y: 26 },
-              { x: "Jun", y: 154 },
-            ],
-          },
-          {
-            id: "Mobile",
-            data: [
-              { x: "Jan", y: 60 },
-              { x: "Feb", y: 48 },
-              { x: "Mar", y: 177 },
-              { x: "Apr", y: 78 },
-              { x: "May", y: 96 },
-              { x: "Jun", y: 204 },
-            ],
-          },
-        ]}
+        data={chartData}
         margin={{ top: 10, right: 10, bottom: 40, left: 40 }}
         xScale={{
           type: "point",
@@ -54,7 +73,7 @@ function LineChart({ className, ...props }: LineChartProps) {
           tickValues: 5,
           tickPadding: 16,
         }}
-        colors={["#2563eb", "#e11d48"]}
+        colors={["#2563eb"]}
         pointSize={6}
         useMesh={true}
         gridYValues={6}
@@ -76,7 +95,7 @@ function LineChart({ className, ...props }: LineChartProps) {
           },
         }}
         role="application" />
-    </div>)
+    </div>
   );
 }
 
@@ -154,7 +173,7 @@ const Analytic = () => {
                 <CardTitle>Profits</CardTitle>
               </CardHeader>
               <CardContent>
-                <LineChart className="aspect-[4/3]" />
+                <PaymentsChart className="aspect-[4/3]" />
                  </CardContent>
             </Card>
             <Card>
@@ -170,7 +189,7 @@ const Analytic = () => {
                 <CardTitle>Bookings</CardTitle>
               </CardHeader>
               <CardContent>
-                <LineChart className="aspect-[4/3]" />
+                <BookingsChart className="aspect-[4/3]" />
               </CardContent>
             </Card>
             <Card>
