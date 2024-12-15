@@ -8,18 +8,13 @@ import "../../node_modules/jsvectormap/dist/jsvectormap.css";
 import Loader from "@/components/common/Loader";
 import "@/css/satoshi.css";
 import "@/css/style.css";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 
 const queryClient = new QueryClient();
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function AuthenticationCheck({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -32,7 +27,6 @@ export default function RootLayout({
       }
 
       try {
-        // Verify token using the verify:verifyStaffToken endpoint
         const response = await axios.post(`${API_BASE_URL}/query`, {
           path: "verify:verifyStaffToken",
           args: { token }
@@ -43,7 +37,6 @@ export default function RootLayout({
           return;
         }
 
-        // If valid, store token in cookie
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         setLoading(false);
       } catch (error) {
@@ -55,12 +48,25 @@ export default function RootLayout({
     checkAuth();
   }, [searchParams]);
 
+  if (loading) return <Loader />;
+  return <>{children}</>;
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <QueryClientProvider client={queryClient}>
       <html lang="en">
         <body suppressHydrationWarning={true}>
           <div className="dark:bg-boxdark-2 dark:text-bodydark">
-            {loading ? <Loader /> : children}
+            <Suspense fallback={<Loader />}>
+              <AuthenticationCheck>
+                {children}
+              </AuthenticationCheck>
+            </Suspense>
           </div>
         </body>
       </html>
