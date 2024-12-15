@@ -182,6 +182,7 @@ const Analytic = () => {
   const [carsCount, setCarsCount] = useState(0);
   const [customerCount, setCustomerCount] = useState(0);
   const [staffCount, setStaffCount] = useState(0);
+  const [activeBookingCount, setActiveBookingCount] = useState(0);
 
   const fetchCarsCount = async () => {
     try {
@@ -213,6 +214,21 @@ const Analytic = () => {
     }
   };
 
+
+  const fetchActiveBookingCount= async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "bookings:getActiveBookingsCount",
+        args: {}
+      });
+      
+      if (response.data) {
+        setActiveBookingCount(response.data.value.total);
+      }
+    } catch (err) {
+      console.error('Error fetching active booking count:', err);
+    }
+  };
   const fetchStaffCount = async () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/query`, {
@@ -232,6 +248,7 @@ const Analytic = () => {
     fetchCarsCount();
     fetchCustomerCount();
     fetchStaffCount();
+    fetchActiveBookingCount();
   }, []);
 
   return (
@@ -262,10 +279,11 @@ const Analytic = () => {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Bookings</CardTitle>
+                {/* <CardTitle>Active Bookings</CardTitle> */}
               </CardHeader>
-              <CardContent>
-                <BookingsChart className="aspect-[4/3]" />
+              <CardContent className="flex h-full flex-col items-center justify-center">
+                <div className="text-4xl font-bold">{activeBookingCount}</div>
+                <div className="text-muted-foreground">Currently Active Bookings</div>
               </CardContent>
             </Card>
             <Card>
