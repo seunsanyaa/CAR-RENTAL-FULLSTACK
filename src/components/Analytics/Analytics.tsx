@@ -105,17 +105,37 @@ interface BarChartProps {
 }
 
 function BarChart({ className, ...props }: BarChartProps) {
+  const [growthStats, setGrowthStats] = useState([]);
+
+  const fetchBookingStats = async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "bookings:getDailyBookingStats",
+        args: {}
+      });
+
+      if (response.data?.value) {
+        setGrowthStats(response.data.value);
+      }
+    } catch (err) {
+      console.error('Error fetching booking stats:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookingStats();
+  }, []);
+  // Transform the data for the chart
+  const chartData = growthStats.map((item: any) => ({
+    // name: new Date(item.x).toLocaleDateString('en-US', { weekday: 'short' }),
+    name:item.x,
+    count: item.y
+  }));
+
   return (
-    (<div className={className} {...props}>
+    <div className={className} {...props}>
       <ResponsiveBar
-        data={[
-          { name: "Jan", count: 111 },
-          { name: "Feb", count: 157 },
-          { name: "Mar", count: 129 },
-          { name: "Apr", count: 150 },
-          { name: "May", count: 119 },
-          { name: "Jun", count: 72 },
-        ]}
+        data={chartData}
         keys={["count"]}
         indexBy="name"
         margin={{ top: 0, right: 0, bottom: 40, left: 40 }}
@@ -151,8 +171,8 @@ function BarChart({ className, ...props }: BarChartProps) {
         tooltipLabel={({ id }) => `${id}`}
         enableLabel={false}
         role="application"
-        ariaLabel="A bar chart showing data" />
-    </div>)
+        ariaLabel="A bar chart showing booking data" />
+    </div>
   );
 }
 
@@ -234,7 +254,7 @@ const Analytic = () => {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Visitors</CardTitle>
+                <CardTitle>Bookings</CardTitle>
               </CardHeader>
               <CardContent>
                 <BarChart className="aspect-[4/3]" />

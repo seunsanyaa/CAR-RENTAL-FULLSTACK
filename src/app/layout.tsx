@@ -30,28 +30,28 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
 
       const token = searchParams?.get('token');
       
-      if (!token) {
-        window.location.href = 'https://google.com';
-        return;
-      }
+      // if (!token) {
+      //   window.location.href = 'https://google.com';
+      //   return;
+      // }
 
-      try {
-        const response = await axios.post(`${API_BASE_URL}/query`, {
-          path: "verify:verifyStaffToken",
-          args: { token }
-        });
+      // try {
+      //   const response = await axios.post(`${API_BASE_URL}/query`, {
+      //     path: "verify:verifyStaffToken",
+      //     args: { token }
+      //   });
     
-        if (response.data.status !== 'success') {
-          window.location.href = 'https://car-rental-fullstack.vercel.app';
-          return;
-        }
+      //   if (response.data.status !== 'success') {
+      //     window.location.href = 'https://car-rental-fullstack.vercel.app';
+      //     return;
+      //   }
 
-        document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
+      //   document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         setLoading(false);
-      } catch (error) {
-        console.error('Auth error:', error);
-        window.location.href = 'https://google.com';
-      }
+      // } catch (error) {
+      //   console.error('Auth error:', error);
+      //   window.location.href = 'https://google.com';
+      // }
     };
 
     checkAuth();
