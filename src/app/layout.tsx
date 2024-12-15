@@ -1,14 +1,14 @@
 "use client";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import "../../node_modules/flatpickr/dist/flatpickr.min.css";
 import "../../node_modules/jsvectormap/dist/jsvectormap.css";
 
 import Loader from "@/components/common/Loader";
 import "@/css/satoshi.css";
 import "@/css/style.css";
-import React, { useEffect, useState, Suspense } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 
 const queryClient = new QueryClient();
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
@@ -19,6 +19,15 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // First check if auth cookie exists
+      const cookies = document.cookie.split(';');
+      const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth='));
+      
+      if (authCookie) {
+        setLoading(false);
+        return; // Already authenticated
+      }
+
       const token = searchParams?.get('token');
       
       if (!token) {
@@ -32,7 +41,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
           args: { token }
         });
     
-        if (response.data.status!=='success') {
+        if (response.data.status !== 'success') {
           window.location.href = 'https://car-rental-fullstack.vercel.app';
           return;
         }
