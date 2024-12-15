@@ -37,8 +37,9 @@ export default function RootLayout({
           path: "verify:verifyStaffToken",
           args: { token }
         });
-
-        if (!response.data || !response.data.valid) {
+        console.log(response.data);
+        console.log(response.data.success);
+        if (response.data.status!=='success') {
           window.location.href = 'https://your-auth-domain.com/login';
           return;
         }
