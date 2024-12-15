@@ -4,7 +4,7 @@ import ClickOutside from "@/components/ClickOutside";
 import SidebarItem from "@/components/Sidebar/SidebarItem";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -12,16 +12,7 @@ interface SidebarProps {
 }
 
 
-export const getRoleFromCookie = () => {
-  if (typeof document === 'undefined') return null;
-  
-  const cookies = document.cookie.split(';');
-  const roleCookie = cookies.find(cookie => cookie.trim().startsWith('role='));
-  if (roleCookie) {
-    return roleCookie.split('=')[1].trim();
-  }
-  return null;
-};
+
 const menuGroups = [
   {
     name: "MENU",
@@ -160,13 +151,16 @@ const menuGroups = [
 ];
 
 const getFilteredMenuItems = (role: string | null) => {
+  console.log(role,'role')
   if (!role) return [];
 
   switch (role) {
-    case 'admin' || 'manager':
+    case 'admin' :
       // Show all menu items for admin
       return menuGroups[0].menuItems;
-    
+    case 'admin' ?? 'manager':
+        // Show all menu items for admin
+        return menuGroups[0].menuItems;
     case 'fleetManager':
       // Show only fleets for fleet manager
       return menuGroups[0].menuItems.filter(item => 
@@ -185,11 +179,28 @@ const getFilteredMenuItems = (role: string | null) => {
 };
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
-  const pathname = usePathname();
-  const [pageName, setPageName] = useLocalStorage("selectedMenu", "dashboard");
-  const role = getRoleFromCookie();
-  const filteredMenuItems = getFilteredMenuItems(role);
 
+
+  const [pageName, setPageName] = useLocalStorage("selectedMenu", "dashboard");
+const [filteredMenuItems, setFilteredMenuItems] = useState<{
+  icon: JSX.Element;
+  label: string;
+  route: string;
+}[]>([]);
+
+ 
+
+useEffect(()=>{
+
+  const cookies = document.cookie.split(';');
+  const roleCookie = cookies.find(cookie => cookie.trim().startsWith('role='));
+  if (roleCookie) {
+    const menu = getFilteredMenuItems(roleCookie.split('=')[1].trim())
+    console.log(menu,'roleCookie')
+
+    setFilteredMenuItems(menu);
+  }
+},[])
   return (
     <ClickOutside onClick={() => setSidebarOpen(false)}>
       <aside
