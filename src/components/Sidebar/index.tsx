@@ -158,7 +158,7 @@ const getFilteredMenuItems = (role: string | null) => {
     case 'admin' :
       // Show all menu items for admin
       return menuGroups[0].menuItems;
-    case 'admin' ?? 'manager':
+    case  'manager':
         // Show all menu items for admin
         return menuGroups[0].menuItems;
     case 'fleetManager':
