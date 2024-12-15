@@ -27,7 +27,7 @@ export default function RootLayout({
       const token = searchParams?.get('token');
       
       if (!token) {
-        window.location.href = 'https://your-auth-domain.com/login';
+        window.location.href = 'https://car-rental-fullstack.vercel.app';
         return;
       }
 
@@ -39,7 +39,7 @@ export default function RootLayout({
         });
     
         if (response.data.status!=='success') {
-          window.location.href = 'https://your-auth-domain.com/login';
+          window.location.href = 'https://car-rental-fullstack.vercel.app';
           return;
         }
 
@@ -48,7 +48,7 @@ export default function RootLayout({
         setLoading(false);
       } catch (error) {
         console.error('Auth error:', error);
-        window.location.href = 'https://your-auth-domain.com/login';
+        window.location.href = 'https://car-rental-fullstack.vercel.app';
       }
     };
 
