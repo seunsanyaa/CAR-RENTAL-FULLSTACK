@@ -16,7 +16,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
+export const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
 // Add this type definition at the top of the file
 type Booking = {

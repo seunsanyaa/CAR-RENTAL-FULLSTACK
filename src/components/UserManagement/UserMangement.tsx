@@ -1,4 +1,3 @@
-
 'use client'
 
 
@@ -37,8 +36,33 @@ const UserManagement = () => {
   const handleSaveChanges = () => {
     setIsEditModalOpen(false)
   }
-  const handleAddUser = () => {
-    setIsAddUserModalOpen(false)
+  const handleAddUser = async () => {
+    try {
+      // Assuming you're collecting these values from the form
+      const name = (document.getElementById('name') as HTMLInputElement).value;
+      const email = (document.getElementById('email') as HTMLInputElement).value;
+      const role = document.querySelector('select')?.value || 'customer';
+
+      // Initialize Resend with your API key
+
+      // Send welcome email
+      // await resend.emails.send({
+      //   from: 'admin@carrent.click',
+      //   to: email,
+      //   subject: 'Welcome to Car rental',
+      //   html: `
+      //     <h1>Welcome ${name}!</h1>
+      //     <p>Your account has been created successfully with the role of ${role}.</p>
+      //     <p>Thank you for joining us!</p>
+      //   `
+      // });
+
+      // Close the modal
+      setIsAddUserModalOpen(false);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      // Handle error appropriately (show error message to user)
+    }
   }
   const handleDeleteUser = () => {
     setIsDeleteModalOpen(false)

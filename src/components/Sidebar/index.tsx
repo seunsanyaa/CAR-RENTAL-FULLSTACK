@@ -166,7 +166,6 @@ const getFilteredMenuItems = (role: string | null) => {
       return menuGroups[0].menuItems.filter(item => 
         item.route === '/fleets'
       );
-    
     case 'customerSupport':
       // Show only customer support related items
       return menuGroups[0].menuItems.filter(item => 
