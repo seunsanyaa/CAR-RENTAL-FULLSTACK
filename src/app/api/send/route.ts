@@ -21,11 +21,12 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.log(error);
+      return Response.json({ error }, { status: 500 });
     }
-    console.log(data);
+
+    return Response.json(data);
   } catch (error) {
-    console.log(error);
+    return Response.json({ error }, { status: 500 });
   }
 }
 // const emailTrigger=  await resend.emails.send({
