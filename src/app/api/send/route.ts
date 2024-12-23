@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     <p>Your account has been created successfully with the role of ${role}.</p>
     <p>Thank you for joining us!</p>
 
-    <a href="https://carrent.click/login?token=${token}">Login</a>
+    <a href="http://localhost:3001/Login?email=${email}&token=${token}">Login</a>
   `,
     });
 

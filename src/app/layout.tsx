@@ -31,7 +31,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
       const token = searchParams?.get('token');
       
       if (!token) {
-        window.location.href = 'https://google.com';
+        window.location.href = 'http://localhost:3001/Login';
         return;
       }
 
