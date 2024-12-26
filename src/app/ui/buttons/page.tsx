@@ -1,12 +1,12 @@
-import Link from "next/link";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { Metadata } from "next";
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
+import { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Next.js Buttons | TailAdmin - Next.js Dashboard Template",
+  title: "Next.js Buttons | ",
   description:
-    "This is Next.js Buttons page for TailAdmin - Next.js Tailwind CSS Admin Dashboard Template",
+    " Buttons page  - ",
 };
 
 const Buttons = () => {

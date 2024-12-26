@@ -1,13 +1,13 @@
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
 import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-import { Metadata } from "next";
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
+import { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
 
 export const metadata: Metadata = {
-  title: "Next.js SignIn Page | TailAdmin - Next.js Dashboard Template",
-  description: "This is Next.js Signin Page TailAdmin Dashboard Template",
+  title: "Next.js SignIn Page | ",
+  description: " Signin Page ",
 };
 
 const SignIn: React.FC = () => {

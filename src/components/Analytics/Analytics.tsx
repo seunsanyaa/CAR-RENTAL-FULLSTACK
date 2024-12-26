@@ -1,11 +1,13 @@
 'use client'
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
 import axios from "axios";
+import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
-import { BookingsChart } from "./Bookings";
+import * as XLSX from 'xlsx';
 
 interface LineChartProps {
   className?: string;
@@ -51,8 +53,33 @@ const [dailyVisitors, setDailyVisitors] = useState([]);
     }
   ];
 
+  const handleDownload = () => {
+    // Create worksheet from the data
+    const ws = XLSX.utils.json_to_sheet(dailyVisitors.map((item: any) => ({
+      Date: new Date(item.x).toLocaleDateString('en-US'),
+      Amount: item.y
+    })));
+    
+    // Create workbook and add the worksheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payment Stats");
+    
+    // Generate and download the file
+    XLSX.writeFile(wb, "payment-statistics.xlsx");
+  };
+
   return (
     <div className={className} {...props}>
+      <div className="flex justify-end mb-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleDownload}
+          className="h-8 w-8"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
       <ResponsiveLine
         data={chartData}
         margin={{ top: 10, right: 10, bottom: 40, left: 40 }}
@@ -132,8 +159,33 @@ function BarChart({ className, ...props }: BarChartProps) {
     count: item.y
   }));
 
+  const handleDownload = () => {
+    // Create worksheet from the data
+    const ws = XLSX.utils.json_to_sheet(growthStats.map((item: any) => ({
+      Date: item.x,
+      Bookings: item.y
+    })));
+    
+    // Create workbook and add the worksheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Booking Stats");
+    
+    // Generate and download the file
+    XLSX.writeFile(wb, "booking-statistics.xlsx");
+  };
+
   return (
     <div className={className} {...props}>
+      <div className="flex justify-end mb-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleDownload}
+          className="h-8 w-8"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
       <ResponsiveBar
         data={chartData}
         keys={["count"]}
