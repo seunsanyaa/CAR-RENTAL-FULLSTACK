@@ -151,7 +151,7 @@ const menuGroups = [
 ];
 
 const getFilteredMenuItems = (role: string | null) => {
-  console.log(role,'role')
+ 
   if (!role) return [];
 
   switch (role) {
@@ -195,7 +195,6 @@ useEffect(()=>{
   const roleCookie = cookies.find(cookie => cookie.trim().startsWith('role='));
   if (roleCookie) {
     const menu = getFilteredMenuItems(roleCookie.split('=')[1].trim())
-    console.log(menu,'roleCookie')
 
     setFilteredMenuItems(menu);
   }

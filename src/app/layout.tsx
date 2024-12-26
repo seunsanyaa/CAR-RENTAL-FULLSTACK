@@ -13,6 +13,8 @@ import React, { Suspense, useEffect, useState } from "react";
 const queryClient = new QueryClient();
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
+
+
 function AuthenticationCheck({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
   const searchParams = useSearchParams();
@@ -46,9 +48,16 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
           return;
         }
 
-      
-            document.cookie = `role=${response.data.value.staffMember.role}; path=/; secure; samesite=strict`;
-        
+        const getUser = await axios.post(`${API_BASE_URL}/query`, {
+          path: "users:getUserByEmail",
+          args: { email: response.data.value.staffMember.email }
+        });
+
+        console.log(getUser.data.value,'HJHH');
+
+        // Store email in localStorage
+        localStorage.setItem('staffEmail', response.data.value.staffMember.email);
+        document.cookie = `role=${response.data.value.staffMember.role}; path=/; secure; samesite=strict`;
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         setLoading(false);
       } catch (error) {

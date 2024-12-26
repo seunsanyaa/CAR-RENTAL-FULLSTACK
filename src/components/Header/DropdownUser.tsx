@@ -2,7 +2,9 @@ import ClickOutside from "@/components/ClickOutside";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-
+export const getStaffEmailFromLocalStorage = () => {
+  return localStorage.getItem('staffEmail');
+};
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
