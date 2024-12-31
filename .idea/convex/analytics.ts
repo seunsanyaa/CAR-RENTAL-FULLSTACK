@@ -758,3 +758,61 @@ export const cleanupEmptyFleets = mutation({
     return `Deleted ${deletedCount} empty fleets`;
   },
 });
+
+// Chat Analytics
+export const getUnreadMessageCount = query({
+  args: { userId: v.string(), lastReadTimestamp: v.string() },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_userId', q => q.eq('userId', args.userId))
+      .filter(q => 
+        q.and(
+          q.eq(q.field('isAdmin'), false),
+          q.gt(q.field('timestamp'), args.lastReadTimestamp)
+        )
+      )
+      .collect();
+    return messages.length;
+  },
+});
+
+export const getLastMessage = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_userId', q => q.eq('userId', args.userId))
+      .order('desc')
+      .take(1);
+    return messages[0];
+  },
+});
+
+export const getChatAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const messages = await ctx.db.query('messages').collect();
+    const customers = await ctx.db.query('customers').collect();
+
+    const totalMessages = messages.length;
+    const activeChats = new Set(messages.map(m => m.userId)).size;
+    const goldenMemberChats = customers
+      .filter(c => c.goldenMember)
+      .filter(c => messages.some(m => m.userId === c.userId))
+      .length;
+
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    const recentMessages = messages.filter(
+      m => new Date(m.timestamp) > lastWeek
+    ).length;
+
+    return {
+      totalMessages,
+      activeChats,
+      goldenMemberChats,
+      recentMessages,
+    };
+  },
+});

@@ -9,7 +9,7 @@ export interface Customer {
   address: string;
   dateOfBirth: string;
   user?: User;
-
+  goldenMember: boolean;
   id?: string;
   name?: string;
   unreadCount?: number;
