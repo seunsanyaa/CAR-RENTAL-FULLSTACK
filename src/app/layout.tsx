@@ -33,7 +33,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
       const token = searchParams?.get('token');
       
       if (!token) {
-        window.location.href = 'https://final-project-customer-job5.vercel.app/Login';
+        window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
         return;
       }
 
