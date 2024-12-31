@@ -1,10 +1,11 @@
 import { Resend } from "resend";
+import { NextResponse } from 'next/server';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
+    const body = await req.json();
     const { email, role, token } = body;
     console.log(body);
     const { data, error } = await resend.emails.send({
@@ -21,12 +22,12 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      return Response.json({ error }, { status: 500 });
+      return NextResponse.json({ error }, { status: 500 });
     }
 
-    return Response.json(data);
+    return NextResponse.json(data);
   } catch (error) {
-    return Response.json({ error }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 // const emailTrigger=  await resend.emails.send({
