@@ -49,66 +49,38 @@ const CarsTable = () => {
   const [expandedFleets, setExpandedFleets] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isEditingCar, setIsEditingCar] = useState(false);
+  const [cloningCar, setCloningCar] = useState<CarWithStatus | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
 
   const fetchFleets = async () => {
     setLoading(true);
     setError(null);
     try {
-      // First get all fleets
+      // Get fleets with car information
       const fleetResponse = await axios.post(`${API_BASE_URL}/query`, {
-        path: "analytics:getAll",
+        path: "analytics:getAllFleets",
         args: {}
       });
 
-      // Then get all cars to determine fleet types
-      const carsResponse = await axios.post(`${API_BASE_URL}/query`, {
-        path: "car:getAllCars",
-        args: {
-          includeInactive: true
-        }
-      });
-
-      console.log('Raw cars response:', carsResponse.data);
-
-      if (fleetResponse.data && carsResponse.data) {
-        const rawFleets = fleetResponse.data.value || [];
-        const cars = carsResponse.data.value || [];
-
-        console.log('Total cars fetched:', cars.length);
-        console.log('Cars availability breakdown:', {
-          active: cars.filter((car: CarWithStatus) => car.available).length,
-          inactive: cars.filter((car: CarWithStatus) => !car.available).length
-        });
-
-        // Process fleets to add type based on cars
-        const processedFleets = rawFleets.map((fleet: Fleet) => {
-          // Find all cars in this fleet, regardless of status
-          const fleetCars = cars.filter((car: CarWithStatus) => 
-            fleet.registrationNumber.includes(car.registrationNumber)
-          );
-          
-          console.log(`Fleet ${fleet.maker} ${fleet.model} cars:`, {
-            total: fleetCars.length,
-            active: fleetCars.filter((car: CarWithStatus) => car.available).length,
-            inactive: fleetCars.filter((car: CarWithStatus) => !car.available).length,
-            registrationNumbers: fleetCars.map((car: CarWithStatus) => car.registrationNumber)
+      if (fleetResponse.data) {
+        const processedFleets = fleetResponse.data.value || [];
+        
+        // Check for empty fleets and delete them
+        const emptyFleetIds = processedFleets[0]?.emptyFleetIds;
+        if (emptyFleetIds && emptyFleetIds.length > 0) {
+          await axios.post(`${API_BASE_URL}/mutation`, {
+            path: "analytics:deleteEmptyFleets",
+            args: { fleetIds: emptyFleetIds }
           });
-
-          let type: Fleet['type'] = 'normal';
-          if (fleetCars.some((car: CarWithStatus) => car.golden)) {
-            type = 'golden';
-          } else if (fleetCars.some((car: CarWithStatus) => car.disabled)) {
-            type = 'accessibility';
-          }
-
-          return {
-            ...fleet,
-            type
-          };
-        });
+        }
 
         setFleets(processedFleets);
-        setCarData(cars);
+        
+        // Extract all cars from the fleets
+        const allCars = processedFleets.reduce((acc: CarWithStatus[], fleet: Fleet & { cars?: CarWithStatus[] }) => {
+          return [...acc, ...(fleet.cars || [])];
+        }, []);
+        setCarData(allCars);
       }
     } catch (err) {
       console.error('Error fetching fleets:', err);
@@ -188,13 +160,25 @@ const CarsTable = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_BASE_URL}/mutation`, {
+      // Delete the car first
+      await axios.post(`${API_BASE_URL}/mutation`, {
         path: "car:deleteCar",
         args: { registrationNumber }
       });
-      if (response.data) {
-        fetchCars(); // Fetch all cars again after successful deletion
+      
+      try {
+        // Try to cleanup empty fleets, but don't fail if it errors
+        await axios.post(`${API_BASE_URL}/mutation`, {
+          path: "analytics:cleanupEmptyFleets"
+        });
+      } catch (cleanupErr) {
+        console.error('Error cleaning up fleets:', cleanupErr);
+        // Don't set error or throw - we still want to refresh the UI
       }
+      
+      // Refresh the UI regardless of cleanup success
+      fetchFleets();
+      fetchCars();
     } catch (err) {
       console.error('Error deleting car:', err);
       setError('Failed to delete car. Please try again.');
@@ -270,10 +254,13 @@ const CarsTable = () => {
     }
   };
 
-  const handleCopyCar = (car: CarWithStatus) => {
-    // Logic to handle copying a car can remain here or be moved to CarAdd if desired
-    // For simplicity, it's retained here
-    // You might consider prompting the user to edit the copied car details
+  const handleCopyBooking = (car: CarWithStatus) => {
+    const carForClone = {
+      ...car,
+      disabled: car.disabled || false
+    };
+    setCloningCar(null); // Reset first to ensure state change
+    setTimeout(() => setCloningCar(carForClone), 0); // Set in next tick
   };
 
   const toggleRow = (registrationNumber: string) => {
@@ -288,8 +275,12 @@ const CarsTable = () => {
     });
   };
 
-  const handleCarAdded = (car: CarWithStatus) => {
-    fetchCars(); // Fetch all cars again when a new car is added
+  const handleCarAdded = (car: Car) => {
+    if (Object.keys(car).length > 0) {
+      fetchFleets();
+      fetchCars();
+    }
+    setCloningCar(null);
   };
 
   const filteredFleets = fleets.filter(fleet => {
@@ -300,13 +291,14 @@ const CarsTable = () => {
   const handleToggleAvailability = async (car: CarWithStatus) => {
     try {
       await axios.post(`${API_BASE_URL}/mutation`, {
-        path: "analytics:toggleCarAvailability",
+        path: "car:updateCar",
         args: {
           registrationNumber: car.registrationNumber,
           available: !car.available
         }
       });
-      fetchCars(); // Refresh cars after toggle
+      fetchFleets();
+      fetchCars();
     } catch (err) {
       console.error('Error toggling car availability:', err);
       setError('Failed to update car status. Please try again.');
@@ -318,7 +310,15 @@ const CarsTable = () => {
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
           <h4 className="text-xl font-semibold text-black dark:text-white">Fleet Management</h4>
-          <CarAdd onCarAdded={handleCarAdded} />
+          <div className="flex gap-2">
+            <CarAdd onCarAdded={handleCarAdded} />
+            {cloningCar && (
+              <CarAdd 
+                onCarAdded={handleCarAdded} 
+                initialData={cloningCar} 
+              />
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4">
@@ -673,8 +673,12 @@ const CarsTable = () => {
                       <Link href={`/cars/${car.registrationNumber}`}>
                         <Button variant="link" size="sm">View</Button>
                       </Link>
-                      <Button variant="outline" size="sm" onClick={() => handleCopyCar(car)}>
-                        <Copy className="w-4 h-4 mr-2" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyBooking(car)}
+                        className="mr-2"
+                      >
                         Clone
                       </Button>
                     </td>

@@ -5,7 +5,7 @@ import { User } from "@/types/staff";
 import axios from "axios";
 import { ChevronDown, ChevronUp, Copy } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -38,6 +38,9 @@ const CustomersTable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -287,324 +290,295 @@ const CustomersTable = () => {
     });
   };
 
+  // Add sorting functionality
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Filter and sort customers
+  const filteredAndSortedCustomers = useMemo(() => {
+    let filtered = [...customersData];
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter((customer) =>
+        Object.values(customer).some((value) =>
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Apply sorting
+    if (sortConfig) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof typeof a];
+        const bValue = b[sortConfig.key as keyof typeof b];
+        
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [customersData, searchTerm, sortConfig]);
+
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="text-xl font-semibold text-black dark:text-white">Customers Overview</h4>
-        <Sheet open={isAddingCustomer} onOpenChange={setIsAddingCustomer}>
-          <SheetTrigger asChild>
-            <Button variant="default" className="text-white">Add Customer</Button>
-          </SheetTrigger>
-          <SheetContent>
-            <div className="h-full flex flex-col">
-              <SheetHeader>
-                <SheetTitle>Add New Customer</SheetTitle>
-                <SheetDescription>
-                  Enter the details of the new customer below. Click &quot;Add&quot; to save.
-                </SheetDescription>
-              </SheetHeader>
-              <form onSubmit={handleAddCustomerSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
-                <div>
-                  <label htmlFor="userId" className="text-sm font-medium">User ID</label>
-                  <Input
-                    id="userId"
-                    name="userId"
-                    value={newCustomer.userId}
-                    onChange={handleInputChange}
-                  />
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <Input
+            type="text"
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => setIsAddingCustomer(true)}
+            className="bg-primary text-white hover:bg-opacity-90"
+          >
+            Add Customer
+          </Button>
+        </div>
+      </div>
+
+      <div className="max-w-full overflow-x-auto">
+        <table className="w-full table-auto">
+          <thead>
+            <tr className="bg-gray-2 text-left dark:bg-meta-4">
+              <th className="py-4 px-4 font-medium text-black dark:text-white"></th>
+              <th className="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white">
+                <div className="flex items-center cursor-pointer" onClick={() => handleSort('firstName')}>
+                  Name
+                  {sortConfig?.key === 'firstName' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={newCustomer.firstName}
-                    onChange={handleInputChange}
-                  />
+              </th>
+              <th className="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white">
+                <div className="flex items-center cursor-pointer" onClick={() => handleSort('email')}>
+                  Email
+                  {sortConfig?.key === 'email' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={newCustomer.lastName}
-                    onChange={handleInputChange}
-                  />
+              </th>
+              <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
+                <div className="flex items-center cursor-pointer" onClick={() => handleSort('nationality')}>
+                  Nationality
+                  {sortConfig?.key === 'nationality' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="email" className="text-sm font-medium">Email</label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={handleInputChange}
-                  />
+              </th>
+              <th className="min-w-[80px] py-4 px-4 font-medium text-black dark:text-white">
+                <div className="flex items-center cursor-pointer" onClick={() => handleSort('age')}>
+                  Age
+                  {sortConfig?.key === 'age' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="nationality" className="text-sm font-medium">Nationality</label>
-                  <Input
-                    id="nationality"
-                    name="nationality"
-                    value={newCustomer.nationality}
-                    onChange={handleInputChange}
-                  />
+              </th>
+              <th className="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">
+                <div className="flex items-center cursor-pointer" onClick={() => handleSort('phoneNumber')}>
+                  Phone
+                  {sortConfig?.key === 'phoneNumber' && (
+                    sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="age" className="text-sm font-medium">Age</label>
-                  <Input
-                    id="age"
-                    name="age"
-                    type="number"
-                    value={newCustomer.age}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    value={newCustomer.phoneNumber}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="licenseNumber" className="text-sm font-medium">License Number</label>
-                  <Input
-                    id="licenseNumber"
-                    name="licenseNumber"
-                    value={newCustomer.licenseNumber}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="address" className="text-sm font-medium">Address</label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={newCustomer.address}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth</label>
-                  <Input
-                    id="dateOfBirth"
-                    name="dateOfBirth"
-                    type="date"
-                    value={newCustomer.dateOfBirth}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="mt-4">
-                  <Button type="submit" className="text-white w-full">
-                    Add Customer
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </SheetContent>
-        </Sheet>
+              </th>
+              <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredAndSortedCustomers.map((customer) => (
+              <React.Fragment key={customer.userId}>
+                <tr className="border-b border-stroke dark:border-strokedark">
+                  <td className="py-3 px-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleRow(customer.userId)}
+                    >
+                      {expandedRows.has(customer.userId) ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </td>
+                  <td className="py-3 px-4">
+                    {customer.user ? `${customer.user.firstName} ${customer.user.lastName}` : 'N/A'}
+                  </td>
+                  <td className="py-3 px-4">{customer.user ? customer.user.email : 'N/A'}</td>
+                  <td className="py-3 px-4">{customer.nationality}</td>
+                  <td className="py-3 px-4">{customer.age}</td>
+                  <td className="py-3 px-4">{customer.phoneNumber}</td>
+                  <td className="py-3 px-4 flex space-x-2">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(customer)}>Edit</Button>
+                      </SheetTrigger>
+                      <SheetContent>
+                        <div className="h-full flex flex-col">
+                          <SheetHeader>
+                            <SheetTitle>Edit Customer</SheetTitle>
+                            <SheetDescription>
+                              Make changes to the customer details here. Click &quot;save&quot; when you&apos;re done.
+                            </SheetDescription>
+                          </SheetHeader>
+                          {editingCustomer && customer.userId === editingCustomer.userId && (
+                            <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
+                              <div>
+                                <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
+                                <Input
+                                  id="firstName"
+                                  name="firstName"
+                                  value={editingCustomer.user?.firstName || ''}
+                                  onChange={(e) => setEditingCustomer({
+                                    ...editingCustomer,
+                                    user: { ...editingCustomer.user, firstName: e.target.value }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
+                                <Input
+                                  id="lastName"
+                                  name="lastName"
+                                  value={editingCustomer.user?.lastName || ''}
+                                  onChange={(e) => setEditingCustomer({
+                                    ...editingCustomer,
+                                    user: { ...editingCustomer.user, lastName: e.target.value }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                                <Input
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  value={editingCustomer.user?.email || ''}
+                                  onChange={(e) => setEditingCustomer({
+                                    ...editingCustomer,
+                                    user: { ...editingCustomer.user, email: e.target.value }
+                                  })}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="nationality" className="text-sm font-medium">Nationality</label>
+                                <Input
+                                  id="nationality"
+                                  name="nationality"
+                                  value={editingCustomer.nationality}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="age" className="text-sm font-medium">Age</label>
+                                <Input
+                                  id="age"
+                                  name="age"
+                                  type="number"
+                                  value={editingCustomer.age}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</label>
+                                <Input
+                                  id="phoneNumber"
+                                  name="phoneNumber"
+                                  value={editingCustomer.phoneNumber}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="licenseNumber" className="text-sm font-medium">License Number</label>
+                                <Input
+                                  id="licenseNumber"
+                                  name="licenseNumber"
+                                  value={editingCustomer.licenseNumber}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="address" className="text-sm font-medium">Address</label>
+                                <Input
+                                  id="address"
+                                  name="address"
+                                  value={editingCustomer.address}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth</label>
+                                <Input
+                                  id="dateOfBirth"
+                                  name="dateOfBirth"
+                                  type="date"
+                                  value={editingCustomer.dateOfBirth}
+                                  onChange={handleInputChange}
+                                />
+                              </div>
+                              <div className="mt-4">
+                                <Button type="submit" className="text-white w-full">
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </form>
+                          )}
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDelete(customer.userId)}
+                    >
+                      Delete
+                    </Button>
+                    <Link href={`/customers/${customer.userId}`}>
+                      <Button variant="link" size="sm">View</Button>
+                    </Link>
+                    <Button variant="outline" size="sm" onClick={() => handleCopyCustomer(customer)}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Clone
+                    </Button>
+                  </td>
+                </tr>
+                {expandedRows.has(customer.userId) && (
+                  <tr className="bg-gray-50 dark:bg-gray-800">
+                    <td colSpan={7} className="py-3 px-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <p><strong>Name:</strong> {customer.user ? `${customer.user.firstName} ${customer.user.lastName}` : 'N/A'}</p>
+                        <p><strong>Email:</strong> {customer.user ? customer.user.email : 'N/A'}</p>
+                        <p><strong>Nationality:</strong> {customer.nationality}</p>
+                        <p><strong>Age:</strong> {customer.age}</p>
+                        <p><strong>Phone Number:</strong> {customer.phoneNumber}</p>
+                        <p><strong>License Number:</strong> {customer.licenseNumber}</p>
+                        <p><strong>Address:</strong> {customer.address}</p>
+                        <p><strong>Date of Birth:</strong> {customer.dateOfBirth}</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
       
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
-      
-      {!loading && !error && (
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                <th className="py-4 px-4 font-medium text-black dark:text-white"></th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Name</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Email</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Nationality</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Age</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Phone Number</th>
-                <th className="py-4 px-4 font-medium text-black dark:text-white">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customersData.map((customer) => (
-                <React.Fragment key={customer.userId}>
-                  <tr className="border-b border-stroke dark:border-strokedark">
-                    <td className="py-3 px-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleRow(customer.userId)}
-                      >
-                        {expandedRows.has(customer.userId) ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </td>
-                    <td className="py-3 px-4">
-                      {customer.user ? `${customer.user.firstName} ${customer.user.lastName}` : 'N/A'}
-                    </td>
-                    <td className="py-3 px-4">{customer.user ? customer.user.email : 'N/A'}</td>
-                    <td className="py-3 px-4">{customer.nationality}</td>
-                    <td className="py-3 px-4">{customer.age}</td>
-                    <td className="py-3 px-4">{customer.phoneNumber}</td>
-                    <td className="py-3 px-4 flex space-x-2">
-                      <Sheet>
-                        <SheetTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(customer)}>Edit</Button>
-                        </SheetTrigger>
-                        <SheetContent>
-                          <div className="h-full flex flex-col">
-                            <SheetHeader>
-                              <SheetTitle>Edit Customer</SheetTitle>
-                              <SheetDescription>
-                                Make changes to the customer details here. Click &quot;save&quot; when you&apos;re done.
-                              </SheetDescription>
-                            </SheetHeader>
-                            {editingCustomer && customer.userId === editingCustomer.userId && (
-                              <form onSubmit={handleSubmit} className="space-y-4 mt-4 flex-grow overflow-y-auto">
-                                <div>
-                                  <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
-                                  <Input
-                                    id="firstName"
-                                    name="firstName"
-                                    value={editingCustomer.user?.firstName || ''}
-                                    onChange={(e) => setEditingCustomer({
-                                      ...editingCustomer,
-                                      user: { ...editingCustomer.user, firstName: e.target.value }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
-                                  <Input
-                                    id="lastName"
-                                    name="lastName"
-                                    value={editingCustomer.user?.lastName || ''}
-                                    onChange={(e) => setEditingCustomer({
-                                      ...editingCustomer,
-                                      user: { ...editingCustomer.user, lastName: e.target.value }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="email" className="text-sm font-medium">Email</label>
-                                  <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={editingCustomer.user?.email || ''}
-                                    onChange={(e) => setEditingCustomer({
-                                      ...editingCustomer,
-                                      user: { ...editingCustomer.user, email: e.target.value }
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="nationality" className="text-sm font-medium">Nationality</label>
-                                  <Input
-                                    id="nationality"
-                                    name="nationality"
-                                    value={editingCustomer.nationality}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="age" className="text-sm font-medium">Age</label>
-                                  <Input
-                                    id="age"
-                                    name="age"
-                                    type="number"
-                                    value={editingCustomer.age}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</label>
-                                  <Input
-                                    id="phoneNumber"
-                                    name="phoneNumber"
-                                    value={editingCustomer.phoneNumber}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="licenseNumber" className="text-sm font-medium">License Number</label>
-                                  <Input
-                                    id="licenseNumber"
-                                    name="licenseNumber"
-                                    value={editingCustomer.licenseNumber}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="address" className="text-sm font-medium">Address</label>
-                                  <Input
-                                    id="address"
-                                    name="address"
-                                    value={editingCustomer.address}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div>
-                                  <label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth</label>
-                                  <Input
-                                    id="dateOfBirth"
-                                    name="dateOfBirth"
-                                    type="date"
-                                    value={editingCustomer.dateOfBirth}
-                                    onChange={handleInputChange}
-                                  />
-                                </div>
-                                <div className="mt-4">
-                                  <Button type="submit" className="text-white w-full">
-                                    Save Changes
-                                  </Button>
-                                </div>
-                              </form>
-                            )}
-                          </div>
-                        </SheetContent>
-                      </Sheet>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleDelete(customer.userId)}
-                      >
-                        Delete
-                      </Button>
-                      <Link href={`/customers/${customer.userId}`}>
-                        <Button variant="link" size="sm">View</Button>
-                      </Link>
-                      <Button variant="outline" size="sm" onClick={() => handleCopyCustomer(customer)}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Clone
-                      </Button>
-                    </td>
-                  </tr>
-                  {expandedRows.has(customer.userId) && (
-                    <tr className="bg-gray-50 dark:bg-gray-800">
-                      <td colSpan={7} className="py-3 px-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <p><strong>Name:</strong> {customer.user ? `${customer.user.firstName} ${customer.user.lastName}` : 'N/A'}</p>
-                          <p><strong>Email:</strong> {customer.user ? customer.user.email : 'N/A'}</p>
-                          <p><strong>Nationality:</strong> {customer.nationality}</p>
-                          <p><strong>Age:</strong> {customer.age}</p>
-                          <p><strong>Phone Number:</strong> {customer.phoneNumber}</p>
-                          <p><strong>License Number:</strong> {customer.licenseNumber}</p>
-                          <p><strong>Address:</strong> {customer.address}</p>
-                          <p><strong>Date of Birth:</strong> {customer.dateOfBirth}</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 };

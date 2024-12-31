@@ -671,3 +671,90 @@ export const deleteBooking = mutation({
 		return await ctx.db.delete(args.bookingId);
 	},
 });
+
+export const getAllFleets = query({
+  handler: async (ctx) => {
+    // Get all fleets
+    const fleets = await ctx.db.query("fleets").collect();
+    const cars = await ctx.db.query("cars").collect();
+    const processedFleets = [];
+    const emptyFleetIds = [];
+
+    // Process fleets to include car information
+    for (const fleet of fleets) {
+      const fleetCars = cars.filter(car => 
+        fleet.registrationNumber.includes(car.registrationNumber)
+      );
+
+      // Track empty fleets for deletion
+      if (fleetCars.length === 0) {
+        emptyFleetIds.push(fleet._id);
+        continue;
+      }
+
+      const activeCars = fleetCars.filter(car => car.available);
+      const inactiveCars = fleetCars.filter(car => !car.available);
+
+      let type = 'normal';
+      if (fleetCars.some(car => car.golden)) {
+        type = 'golden';
+      } else if (fleetCars.some(car => car.disabled)) {
+        type = 'accessibility';
+      }
+
+      processedFleets.push({
+        ...fleet,
+        type,
+        totalCars: fleetCars.length,
+        activeCars: activeCars.length,
+        inactiveCars: inactiveCars.length,
+        cars: fleetCars,
+        isEmpty: fleetCars.length === 0,
+        emptyFleetIds
+      });
+    }
+
+    return processedFleets;
+  },
+});
+
+// Add this mutation to handle empty fleet deletion
+export const deleteEmptyFleets = mutation({
+  args: {
+    fleetIds: v.array(v.id("fleets"))
+  },
+  handler: async (ctx, args) => {
+    for (const fleetId of args.fleetIds) {
+      await ctx.db.delete(fleetId);
+    }
+    return { success: true };
+  },
+});
+
+// Add this after getAllFleets query
+export const cleanupEmptyFleets = mutation({
+  handler: async (ctx) => {
+    // Get all fleets
+    const fleets = await ctx.db.query("fleets").collect();
+    // Get all cars
+    const cars = await ctx.db.query("cars").collect();
+
+    let deletedCount = 0;
+    
+    // Check each fleet
+    for (const fleet of fleets) {
+      // Find cars in this fleet
+      const fleetCars = cars.filter(car => 
+        fleet.registrationNumber.includes(car.registrationNumber)
+      );
+
+      // If no cars found, delete the fleet
+      if (fleetCars.length === 0) {
+        await ctx.db.delete(fleet._id);
+        deletedCount++;
+      }
+    }
+
+    return `Deleted ${deletedCount} empty fleets`;
+  },
+});
