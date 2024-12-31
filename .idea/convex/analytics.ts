@@ -662,3 +662,12 @@ export const getMinPricesByCategory = query({
 		return minPrices;
 	},
 });
+
+export const deleteBooking = mutation({
+	args: {
+		bookingId: v.id('bookings'),
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db.delete(args.bookingId);
+	},
+});
