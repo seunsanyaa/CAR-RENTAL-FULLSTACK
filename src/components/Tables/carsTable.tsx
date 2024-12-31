@@ -124,12 +124,18 @@ const CarsTable = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/query`, {
         path: "car:getAllCars",
-        args: {
-          includeInactive: true
+        args: selectedFleetType === 'all' ? {} : {
+          golden: selectedFleetType === 'golden' ? true : undefined,
+          disabled: selectedFleetType === 'accessibility' ? true : undefined
         }
       });
       if (response.data) {
-        setCarData(response.data.value);
+        // For normal fleet, filter out golden and disabled cars
+        if (selectedFleetType === 'normal') {
+          setCarData(response.data.value.filter((car: CarWithStatus) => !car.golden && !car.disabled));
+        } else {
+          setCarData(response.data.value);
+        }
       }
     } catch (err) {
       console.error('Error fetching cars:', err);
@@ -142,7 +148,7 @@ const CarsTable = () => {
   useEffect(() => {
     fetchFleets();
     fetchCars();
-  }, []);
+  }, [selectedFleetType]);
 
   const toggleFleet = (fleetId: string) => {
     setExpandedFleets((prev) => {
