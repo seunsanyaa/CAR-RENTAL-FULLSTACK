@@ -1,13 +1,20 @@
 import ClickOutside from "@/components/ClickOutside";
-import { useClerk, useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  
+  const userEmail = typeof window !== 'undefined' ? localStorage.getItem('staffEmail') : null;
+
+  const handleLogout = () => {
+    document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    localStorage.removeItem('staffEmail');
+    
+    window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
+  };
 
   return (
     <ClickOutside onClick={() => setDropdownOpen(false)} className="relative">
@@ -17,16 +24,16 @@ const DropdownUser = () => {
       >
         <span className="hidden text-right lg:block">
           <span className="block text-sm font-medium text-black dark:text-white">
-            {user?.fullName || user?.username || 'User'}
+            Staff Member
           </span>
-          <span className="block text-xs">{user?.primaryEmailAddress?.emailAddress}</span>
+          <span className="block text-xs">{userEmail}</span>
         </span>
 
         <span className="h-12 w-12 rounded-full">
           <Image
             width={112}
             height={112}
-            src={user?.imageUrl || "/images/user/user-01.png"}
+            src={"/images/user/user-01.png"}
             style={{
               width: "auto",
               height: "auto",
@@ -93,7 +100,7 @@ const DropdownUser = () => {
             </li>
           </ul>
           <button 
-            onClick={() => signOut()}
+            onClick={handleLogout}
             className="flex items-center gap-3.5 px-6 py-4 text-sm font-medium duration-300 ease-in-out hover:text-primary lg:text-base"
           >
             <svg
