@@ -90,8 +90,7 @@ const CarsTable = () => {
     }
   };
 
-  // Memoize the fetchCars function
-  const fetchCars = useCallback(async () => {
+  const fetchCars = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -116,11 +115,12 @@ const CarsTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedFleetType]);
+  };
 
   useEffect(() => {
+    fetchFleets();
     fetchCars();
-  }, [fetchCars]);
+  }, [selectedFleetType]);
 
   const toggleFleet = (fleetId: string) => {
     setExpandedFleets((prev) => {

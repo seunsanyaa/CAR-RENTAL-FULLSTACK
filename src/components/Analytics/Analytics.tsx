@@ -7,7 +7,7 @@ import { ResponsiveLine } from "@nivo/line";
 import { ResponsivePie } from "@nivo/pie";
 import axios from "axios";
 import { ChevronDown, ChevronUp, Download, Expand, X } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import * as XLSX from 'xlsx';
 import {
   Dialog,
@@ -172,11 +172,8 @@ const Analytics = () => {
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
   const [popularCarsMetrics, setPopularCarsMetrics] = useState<any>(null);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Memoize the fetchMetrics function
-  const fetchMetrics = useCallback(async (newPeriod: Period = period) => {
+  const fetchMetrics = async (newPeriod: Period = period) => {
     try {
       const [revenue, customers, bookings, cars, performance, popularCars] = await Promise.all([
         axios.post(`${API_BASE_URL}/query`, {
@@ -214,11 +211,11 @@ const Analytics = () => {
     } catch (error) {
       console.error('Error fetching metrics:', error);
     }
-  }, [period]); // Add period as a dependency
+  };
 
   useEffect(() => {
     fetchMetrics();
-  }, [fetchMetrics]);
+  }, [period]);
 
   const handleExportData = (data: any, filename: string) => {
     const ws = XLSX.utils.json_to_sheet([data]);

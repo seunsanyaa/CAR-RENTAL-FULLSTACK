@@ -1,13 +1,21 @@
 import ClickOutside from "@/components/ClickOutside";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { useClerk } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
+import { useClerk, useUser } from "@clerk/nextjs";
 
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { signOut } = useClerk();
+  const { user, isLoaded } = useUser();
   
+  useEffect(() => {
+    if (isLoaded) {
+      console.log("Clerk user data:", user);
+      console.log("User image URL:", user?.imageUrl);
+    }
+  }, [isLoaded, user]);
+
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('staffEmail') : null;
 
   const handleLogout = async () => {
@@ -27,22 +35,26 @@ const DropdownUser = () => {
       >
         <span className="hidden text-right lg:block">
           <span className="block text-sm font-medium text-black dark:text-white">
-            Staff Member
+            {user?.fullName || 'Staff Member'}
           </span>
-          <span className="block text-xs">{userEmail}</span>
+          <span className="block text-xs">{user?.primaryEmailAddress?.emailAddress || userEmail}</span>
         </span>
 
-        <span className="h-12 w-12 rounded-full">
-          <Image
-            width={112}
-            height={112}
-            src={"/images/user/user-01.png"}
-            style={{
-              width: "auto",
-              height: "auto",
-            }}
-            alt="User"
-          />
+        <span className="h-12 w-12 rounded-full overflow-hidden">
+          {isLoaded && (
+            <Image
+              width={112}
+              height={112}
+              src={user?.imageUrl || "/images/user/user-01.png"}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+              alt="User"
+              priority
+            />
+          )}
         </span>
 
         <svg
