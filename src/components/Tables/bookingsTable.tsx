@@ -899,7 +899,7 @@ const BookingsTable = () => {
         {error && <div className="mb-4 text-red-500">{error}</div>}
 
         <Dialog open={showCarSelector} onOpenChange={setShowCarSelector}>
-          <DialogContent className="max-w-4xl">
+          <DialogContent className="max-w-4xl " style={{ backgroundColor: 'white' }}>
             <DialogHeader>
               <DialogTitle>Select Car</DialogTitle>
             </DialogHeader>
