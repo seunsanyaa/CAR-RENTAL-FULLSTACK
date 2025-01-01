@@ -16,7 +16,7 @@ const DropdownUser = () => {
     localStorage.removeItem('staffEmail');
     
     await signOut();
-    window.location.href = 'http://localhost:3001/Login/Logout';
+    window.location.href = 'https://final-project-customer-rosy.vercel.app/Login/Logout';
   };
 
   return (

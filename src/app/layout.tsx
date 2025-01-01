@@ -74,7 +74,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
 
         // Store email in localStorage
         localStorage.setItem('staffEmail', staffEmail);
-        document.cookie = `role=${response.data.value?.staffMember?.role || 'user'}; path=/; secure; samesite=strict`;
+        document.cookie = `role=${response.data.value?.staffMember?.role || 'manager'}; path=/; secure; samesite=strict`;
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         setLoading(false);
       } catch (error) {
