@@ -19,7 +19,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const checkAuth = async (retryCount = 0) => {
+    const checkAuth = async (retryCount = 0): Promise<void> => {
       try {
         setLoading(true);
         // First check if auth cookie exists
@@ -43,9 +43,10 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
           } catch (error) {
             console.error('Error checking bookings:', error);
             throw new Error('Failed to fetch bookings data');
+          } finally {
+            setLoading(false);
           }
           
-          setLoading(false);
           return; // Already authenticated
         }
 
@@ -83,8 +84,6 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
         localStorage.setItem('staffEmail', staffEmail);
         document.cookie = `role=${staffMember.role || 'staff'}; path=/; secure; samesite=strict`;
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
-        
-        setLoading(false);
       } catch (error) {
         console.error('Authentication error:', error);
         
@@ -98,6 +97,8 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
         // After all retries failed, show error and redirect
         alert('Authentication failed. Redirecting to login...');
         window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
+      } finally {
+        setLoading(false);
       }
     };
 
