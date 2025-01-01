@@ -2,18 +2,21 @@ import ClickOutside from "@/components/ClickOutside";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useClerk } from "@clerk/nextjs";
 
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { signOut } = useClerk();
   
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('staffEmail') : null;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = 'role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     localStorage.removeItem('staffEmail');
     
-    window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
+    await signOut();
+    window.location.href = 'http://localhost:3001/Login/Logout';
   };
 
   return (
