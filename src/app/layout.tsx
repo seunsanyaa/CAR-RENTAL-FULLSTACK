@@ -42,15 +42,27 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
           path: "verify:verifyStaffToken",
           args: { token }
         });
-        console.log(response.data,'HJHH');
-        if (response.data.status !== 'success') {
+        console.log('Full API Response:', response.data);
+        
+        if (!response.data || response.data.status !== 'success') {
+          console.error('Invalid response status:', response.data);
+          window.location.href = 'https://car-rental-fullstack.vercel.app';
+          return;
+        }
+
+        // Get email from URL params as fallback
+        const emailFromParams = searchParams?.get('email');
+        const staffEmail = response.data.value?.staffMember?.email || emailFromParams;
+
+        if (!staffEmail) {
+          console.error('No email found in response or URL params');
           window.location.href = 'https://car-rental-fullstack.vercel.app';
           return;
         }
 
         // Store email in localStorage
-        localStorage.setItem('staffEmail', response.data.value.staffMember.email);
-        document.cookie = `role=${response.data.value.staffMember.role}; path=/; secure; samesite=strict`;
+        localStorage.setItem('staffEmail', staffEmail);
+        document.cookie = `role=${response.data.value?.staffMember?.role || 'user'}; path=/; secure; samesite=strict`;
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         setLoading(false);
       } catch (error) {
