@@ -3,7 +3,7 @@
 import { Customer } from "@/types/customer1";
 import axios from "axios";
 import { Search, Send, Star } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -82,7 +82,8 @@ const CustomerSupport = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchMessages = async () => {
+  // Memoize the fetchMessages function
+  const fetchMessages = useCallback(async () => {
     if (!selectedCustomer) return;
     try {
       const response = await axios.post(`${API_BASE_URL}/query`, {
@@ -96,7 +97,7 @@ const CustomerSupport = () => {
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  };
+  }, [selectedCustomer]); // Add selectedCustomer as a dependency
 
   useEffect(() => {
     if (selectedCustomer) {
@@ -108,7 +109,7 @@ const CustomerSupport = () => {
         setPolling(null);
       };
     }
-  }, [selectedCustomer]);
+  }, [selectedCustomer, fetchMessages]); // Add fetchMessages as a dependency
 
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedCustomer) return;

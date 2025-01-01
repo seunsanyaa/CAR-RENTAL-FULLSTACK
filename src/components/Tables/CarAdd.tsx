@@ -40,10 +40,16 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded, initialData }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [years, setYears] = useState<number[]>([]);
+  const [years] = useState<number[]>(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: currentYear - 2000 + 1 }, (_, i) => currentYear - i);
+  });
   const [makes, setMakes] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [trims, setTrims] = useState<string[]>([]);
+  const [loadingMakes, setLoadingMakes] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [loadingTrims, setLoadingTrims] = useState(false);
 
   const carCategories = [
     "Sedan",
@@ -54,61 +60,161 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded, initialData }) => {
     "Truck"
   ];
 
+  // Fetch makes when year changes
   useEffect(() => {
-    const minYear = 2001;
-    const maxYear = 2022;
-    const yearsList = Array.from({ length: maxYear - minYear + 1 }, 
-      (_, i) => maxYear - i); // Create years array from max to min
-    setYears(yearsList);
-  }, []);
+    const getMakes = async () => {
+      if (newCar.year) {
+        setLoadingMakes(true);
+        try {
+          const response = await fetchMakes(newCar.year);
+          if (response && response.Makes) {
+            const makesList = response.Makes.map((make: any) => make.make_display);
+            setMakes(makesList);
+          }
+        } catch (err) {
+          console.error('Error fetching makes:', err);
+          setError('Failed to fetch car makes');
+        } finally {
+          setLoadingMakes(false);
+        }
+      } else {
+        setMakes([]);
+      }
+      // Reset dependent fields
+      setNewCar(prev => ({ ...prev, maker: '', model: '', trim: '' }));
+      setModels([]);
+      setTrims([]);
+    };
 
+    getMakes();
+  }, [newCar.year]);
+
+  // Fetch models when make changes
   useEffect(() => {
-    if (initialData) {
-      setNewCar({
-        model: initialData.model,
-        trim: initialData.trim,
-        color: initialData.color,
-        maker: initialData.maker,
-        lastMaintenanceDate: initialData.lastMaintenanceDate,
-        available: initialData.available,
-        disabled: initialData.disabled || false,
-        golden: initialData.golden || false,
-        year: initialData.year,
-        registrationNumber: "",
-        pictures: [],
-        pricePerDay: initialData.pricePerDay,
-        categories: initialData.categories || [],
-      });
+    const getModels = async () => {
+      if (newCar.year && newCar.maker) {
+        setLoadingModels(true);
+        try {
+          const response = await fetchModels(newCar.year, newCar.maker);
+          if (response && response.Models) {
+            const modelsList = response.Models.map((model: any) => model.model_name);
+            setModels(modelsList);
+          }
+        } catch (err) {
+          console.error('Error fetching models:', err);
+          setError('Failed to fetch car models');
+        } finally {
+          setLoadingModels(false);
+        }
+      } else {
+        setModels([]);
+      }
+      // Reset dependent fields
+      setNewCar(prev => ({ ...prev, model: '', trim: '' }));
+      setTrims([]);
+    };
 
-      // Trigger the API calls to populate the dropdowns
-      if (initialData.year) {
-        fetchMakes(initialData.year)
-          .then((data) => {
-            if (data && data.Makes) {
-              const makeNames = data.Makes.map((make: any) => make.make_display);
-              setMakes(makeNames);
-            }
-          });
+    getModels();
+  }, [newCar.year, newCar.maker]);
+
+  // Fetch trims when model changes
+  useEffect(() => {
+    const getTrims = async () => {
+      if (newCar.year && newCar.maker && newCar.model) {
+        setLoadingTrims(true);
+        try {
+          const response = await fetchTrims(newCar.year, newCar.maker, newCar.model);
+          if (response && response.Trims) {
+            const trimsList = response.Trims.map((trim: any) => trim.model_trim);
+            setTrims(trimsList);
+          }
+        } catch (err) {
+          console.error('Error fetching trims:', err);
+          setError('Failed to fetch car trims');
+        } finally {
+          setLoadingTrims(false);
+        }
+      } else {
+        setTrims([]);
       }
-      if (initialData.year && initialData.maker) {
-        fetchModels(initialData.year, initialData.maker)
-          .then((data) => {
-            if (data && data.Models) {
-              const modelNames = data.Models.map((model: any) => model.model_name);
-              setModels(modelNames);
+      // Reset dependent field
+      setNewCar(prev => ({ ...prev, trim: '' }));
+    };
+
+    getTrims();
+  }, [newCar.year, newCar.maker, newCar.model]);
+
+  // Handle initial data loading for cloning
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (initialData) {
+        setNewCar({
+          model: initialData.model,
+          trim: initialData.trim,
+          color: initialData.color,
+          maker: initialData.maker,
+          lastMaintenanceDate: initialData.lastMaintenanceDate,
+          available: initialData.available,
+          disabled: initialData.disabled || false,
+          golden: initialData.golden || false,
+          year: initialData.year,
+          registrationNumber: "",
+          pictures: [],
+          pricePerDay: initialData.pricePerDay,
+          categories: initialData.categories || [],
+        });
+
+        // Load makes for the initial year
+        if (initialData.year) {
+          setLoadingMakes(true);
+          try {
+            const makesResponse = await fetchMakes(initialData.year);
+            if (makesResponse && makesResponse.Makes) {
+              const makesList = makesResponse.Makes.map((make: any) => make.make_display);
+              setMakes(makesList);
             }
-          });
-      }
-      if (initialData.year && initialData.maker && initialData.model) {
-        fetchTrims(initialData.year, initialData.maker, initialData.model)
-          .then((data) => {
-            if (data && data.Trims) {
-              const trimNames = data.Trims.map((trim: any) => trim.model_trim);
-              setTrims(trimNames);
+          } catch (err) {
+            console.error('Error fetching makes:', err);
+          } finally {
+            setLoadingMakes(false);
+          }
+        }
+
+        // Load models for the initial make
+        if (initialData.year && initialData.maker) {
+          setLoadingModels(true);
+          try {
+            const modelsResponse = await fetchModels(initialData.year, initialData.maker);
+            if (modelsResponse && modelsResponse.Models) {
+              const modelsList = modelsResponse.Models.map((model: any) => model.model_name);
+              setModels(modelsList);
             }
-          });
+          } catch (err) {
+            console.error('Error fetching models:', err);
+          } finally {
+            setLoadingModels(false);
+          }
+        }
+
+        // Load trims for the initial model
+        if (initialData.year && initialData.maker && initialData.model) {
+          setLoadingTrims(true);
+          try {
+            const trimsResponse = await fetchTrims(initialData.year, initialData.maker, initialData.model);
+            if (trimsResponse && trimsResponse.Trims) {
+              const trimsList = trimsResponse.Trims.map((trim: any) => trim.model_trim);
+              setTrims(trimsList);
+            }
+          } catch (err) {
+            console.error('Error fetching trims:', err);
+          } finally {
+            setLoadingTrims(false);
+          }
+        }
       }
-    }
+    };
+
+    loadInitialData();
   }, [initialData]);
 
   const handleInputChange = (
@@ -295,55 +401,79 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded, initialData }) => {
           >
             <div>
               <label htmlFor="year" className="text-sm font-medium">
-                Year
+                Year *
               </label>
               <MultiSelect
                 id="year"
                 options={years.map(year => ({ value: year.toString(), text: year.toString() }))}
                 onSelect={handleYearSelect}
                 placeholder="Select year"
-                allowCustomInput
+                allowCustomInput={false}
                 initialValue={initialData?.year ? initialData.year.toString() : undefined}
               />
             </div>
+            
             <div>
               <label htmlFor="maker" className="text-sm font-medium">
-                Make
+                Make *
               </label>
-              <MultiSelect
-                id="maker"
-                options={makes.map(make => ({ value: make, text: make }))}
-                onSelect={handleMakeSelect}
-                placeholder="Select or enter make"
-                allowCustomInput
-                initialValue={initialData?.maker}
-              />
+              <div className="relative">
+                <MultiSelect
+                  id="maker"
+                  options={makes.map(make => ({ value: make, text: make }))}
+                  onSelect={handleMakeSelect}
+                  placeholder={loadingMakes ? "Loading makes..." : "Select make"}
+                  allowCustomInput={false}
+                  initialValue={initialData?.maker}
+                />
+                {loadingMakes && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
             </div>
+
             <div>
               <label htmlFor="model" className="text-sm font-medium">
-                Model
+                Model *
               </label>
-              <MultiSelect
-                id="model"
-                options={models.map(model => ({ value: model, text: model }))}
-                onSelect={handleModelSelect}
-                placeholder="Select or enter model"
-                allowCustomInput
-                initialValue={initialData?.model}
-              />
+              <div className="relative">
+                <MultiSelect
+                  id="model"
+                  options={models.map(model => ({ value: model, text: model }))}
+                  onSelect={handleModelSelect}
+                  placeholder={loadingModels ? "Loading models..." : "Select model"}
+                  allowCustomInput={false}
+                  initialValue={initialData?.model}
+                />
+                {loadingModels && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
             </div>
+
             <div>
               <label htmlFor="trim" className="text-sm font-medium">
                 Trim
               </label>
-              <MultiSelect
-                id="trim"
-                options={trims.map(trim => ({ value: trim, text: trim }))}
-                onSelect={handleTrimSelect}
-                placeholder="Select or enter trim"
-                allowCustomInput
-                initialValue={initialData?.trim}
-              />
+              <div className="relative">
+                <MultiSelect
+                  id="trim"
+                  options={trims.map(trim => ({ value: trim, text: trim }))}
+                  onSelect={handleTrimSelect}
+                  placeholder={loadingTrims ? "Loading trims..." : "Select trim"}
+                  allowCustomInput={false}
+                  initialValue={initialData?.trim}
+                />
+                {loadingTrims && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label htmlFor="category1" className="text-sm font-medium">
