@@ -20,65 +20,73 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkAuth = async (retryCount = 0) => {
-      // First check if auth cookie exists
-      const cookies = document.cookie.split(';');
-      const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth='));
-      
-      if (authCookie) {
-        // Check number of bookings
-        try {
-          const email = localStorage.getItem('staffEmail');
-          if (email) {
-            const bookingsResponse = await axios.post(`${API_BASE_URL}/query`, {
-              path: "booking:getBookingsByEmail",
-              args: { email }
-            });
-            
-            if (bookingsResponse.data?.value?.length >= 3) {
-              alert('Warning: You have 3 or more active bookings!');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking bookings:', error);
-        }
-        
-        setLoading(false);
-        return; // Already authenticated
-      }
-
-      const token = searchParams?.get('token');
-      
-      if (!token) {
-        window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
-        return;
-      }
-
       try {
-        const response = await axios.post(`${API_BASE_URL}/query`, {
+        setLoading(true);
+        // First check if auth cookie exists
+        const cookies = document.cookie.split(';');
+        const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth='));
+        
+        if (authCookie) {
+          // Check number of bookings
+          try {
+            const email = localStorage.getItem('staffEmail');
+            if (email) {
+              const bookingsResponse = await axios.post(`${API_BASE_URL}/query`, {
+                path: "booking:getBookingsByEmail",
+                args: { email }
+              });
+              
+              if (bookingsResponse.data?.value?.length >= 3) {
+                alert('Warning: You have 3 or more active bookings!');
+              }
+            }
+          } catch (error) {
+            console.error('Error checking bookings:', error);
+            throw new Error('Failed to fetch bookings data');
+          }
+          
+          setLoading(false);
+          return; // Already authenticated
+        }
+
+        const token = searchParams?.get('token');
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        // First verify the token
+        const verifyResponse = await axios.post(`${API_BASE_URL}/query`, {
           path: "verify:verifyStaffToken",
           args: { token }
         });
-        console.log('Full API Response:', response.data);
-        
-        if (!response.data || response.data.status !== 'success') {
-          throw new Error('Invalid response status');
+
+        if (!verifyResponse.data || verifyResponse.data.status !== 'success') {
+          throw new Error('Invalid token verification response');
         }
 
-        // Get email from URL params as fallback
+        // Get staff member data
+        const staffMember = verifyResponse.data.value?.staffMember;
+        if (!staffMember) {
+          throw new Error('No staff member data found');
+        }
+
+        // Get email from response or URL params as fallback
         const emailFromParams = searchParams?.get('email');
-        const staffEmail = response.data.value?.staffMember?.email || emailFromParams;
+        const staffEmail = staffMember.email || emailFromParams;
 
         if (!staffEmail) {
-          throw new Error('No email found');
+          throw new Error('No email found in response or parameters');
         }
 
-        // Store email in localStorage
+        // Only store data after all checks pass
         localStorage.setItem('staffEmail', staffEmail);
-        document.cookie = `role=${response.data.value?.staffMember?.role || 'manager'}; path=/; secure; samesite=strict`;
+        document.cookie = `role=${staffMember.role || 'staff'}; path=/; secure; samesite=strict`;
         document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
+        
         setLoading(false);
       } catch (error) {
-        console.error('Auth error:', error);
+        console.error('Authentication error:', error);
         
         if (retryCount < 3) {
           console.log(`Retrying authentication (attempt ${retryCount + 1}/3)...`);
@@ -87,7 +95,8 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
           return checkAuth(retryCount + 1);
         }
         
-        // After all retries failed, redirect to login
+        // After all retries failed, show error and redirect
+        alert('Authentication failed. Redirecting to login...');
         window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
       }
     };
