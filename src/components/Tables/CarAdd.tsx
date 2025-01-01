@@ -12,29 +12,31 @@ import {
 } from "../ui/sheet";
 import { Car } from "@/types/car";
 import { fetchMakes, fetchModels, fetchTrims } from "../../api/carQueryApi";  
+import { MultiSelect } from "../FormElements/MultiSelect";
 
 interface CarAddProps {
   onCarAdded: (car: Car) => void;
+  initialData?: Omit<Car, 'disabled'> & { disabled?: boolean; golden?: boolean };
 }
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
-const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
-  const [isAddingCar, setIsAddingCar] = useState(false);
+const CarAdd: React.FC<CarAddProps> = ({ onCarAdded, initialData }) => {
+  const [isAddingCar, setIsAddingCar] = useState(initialData ? true : false);
   const [newCar, setNewCar] = useState({
-    model: "",
-    trim: "",
-    color: "",
-    maker: "",
-    lastMaintenanceDate: "",
-    available: false,
-    disabled: false,
-    golden: false,
-    year: 0,
+    model: initialData?.model || "",
+    trim: initialData?.trim || "",
+    color: initialData?.color || "",
+    maker: initialData?.maker || "",
+    lastMaintenanceDate: initialData?.lastMaintenanceDate || "",
+    available: initialData?.available || false,
+    disabled: initialData?.disabled || false,
+    golden: initialData?.golden || false,
+    year: initialData?.year || 0,
     registrationNumber: "",
     pictures: [] as File[],
-    pricePerDay: 0,
-    categories: [] as string[],
+    pricePerDay: initialData?.pricePerDay || 0,
+    categories: initialData?.categories || [] as string[],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,70 +63,53 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
   }, []);
 
   useEffect(() => {
-    if (newCar.year) {
-      fetchMakes(newCar.year)
-        .then((data) => {
-          if (data && data.Makes) {
-            const makeNames = data.Makes.map((make: any) => make.make_display);
-            setMakes(makeNames);
-          } else {
-            setMakes([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching makes:", err);
-          setError("Failed to fetch makes. Please try again.");
-        });
-    } else {
-      setMakes([]);
-    }
-    setModels([]);
-    setTrims([]);
-    setNewCar((prev) => ({ ...prev, maker: "", model: "", trim: "", categories: [] }));
-  }, [newCar.year]);
+    if (initialData) {
+      setNewCar({
+        model: initialData.model,
+        trim: initialData.trim,
+        color: initialData.color,
+        maker: initialData.maker,
+        lastMaintenanceDate: initialData.lastMaintenanceDate,
+        available: initialData.available,
+        disabled: initialData.disabled || false,
+        golden: initialData.golden || false,
+        year: initialData.year,
+        registrationNumber: "",
+        pictures: [],
+        pricePerDay: initialData.pricePerDay,
+        categories: initialData.categories || [],
+      });
 
-  useEffect(() => {
-    if (newCar.year && newCar.maker) {
-      fetchModels(newCar.year, newCar.maker)
-        .then((data) => {
-          if (data && data.Models) {
-            const modelNames = data.Models.map((model: any) => model.model_name);
-            setModels(modelNames);
-          } else {
-            setModels([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching models:", err);
-          setError("Failed to fetch models. Please try again.");
-        });
-    } else {
-      setModels([]);
+      // Trigger the API calls to populate the dropdowns
+      if (initialData.year) {
+        fetchMakes(initialData.year)
+          .then((data) => {
+            if (data && data.Makes) {
+              const makeNames = data.Makes.map((make: any) => make.make_display);
+              setMakes(makeNames);
+            }
+          });
+      }
+      if (initialData.year && initialData.maker) {
+        fetchModels(initialData.year, initialData.maker)
+          .then((data) => {
+            if (data && data.Models) {
+              const modelNames = data.Models.map((model: any) => model.model_name);
+              setModels(modelNames);
+            }
+          });
+      }
+      if (initialData.year && initialData.maker && initialData.model) {
+        fetchTrims(initialData.year, initialData.maker, initialData.model)
+          .then((data) => {
+            if (data && data.Trims) {
+              const trimNames = data.Trims.map((trim: any) => trim.model_trim);
+              setTrims(trimNames);
+            }
+          });
+      }
     }
-    setTrims([]);
-    setNewCar((prev) => ({ ...prev, model: "", trim: "", categories: [] }));
-  }, [newCar.year, newCar.maker]);
-
-  useEffect(() => {
-    if (newCar.year && newCar.maker && newCar.model) {
-      fetchTrims(newCar.year, newCar.maker, newCar.model)
-        .then((data) => {
-          if (data && data.Trims) {
-            const trimNames = data.Trims.map((trim: any) => trim.model_trim);
-            setTrims(trimNames);
-          } else {
-            setTrims([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching trims:", err);
-          setError("Failed to fetch trims. Please try again.");
-        });
-    } else {
-      setTrims([]);
-    }
-    setNewCar((prev) => ({ ...prev, trim: "" }));
-  }, [newCar.year, newCar.maker, newCar.model]);
+  }, [initialData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -262,19 +247,46 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
     }
   };
 
+  const handleYearSelect = (value: string) => {
+    const yearValue = parseInt(value);
+    setNewCar(prev => ({ ...prev, year: yearValue }));
+  };
+
+  const handleMakeSelect = (value: string) => {
+    setNewCar(prev => ({ ...prev, maker: value }));
+  };
+
+  const handleModelSelect = (value: string) => {
+    setNewCar(prev => ({ ...prev, model: value }));
+  };
+
+  const handleTrimSelect = (value: string) => {
+    setNewCar(prev => ({ ...prev, trim: value }));
+  };
+
   return (
-    <Sheet open={isAddingCar} onOpenChange={setIsAddingCar}>
+    <Sheet 
+      open={isAddingCar} 
+      onOpenChange={(open) => {
+        setIsAddingCar(open);
+        if (!open) {
+          onCarAdded({} as Car); // This will trigger the parent to reset cloningCar
+        }
+      }}
+    >
       <SheetTrigger asChild>
-        <Button variant="default" className="text-white">
-          Add Car
-        </Button>
+        {!initialData && (
+          <Button variant="default" className="text-white">
+            Add Car
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent>
         <div className="h-full flex flex-col">
           <SheetHeader>
-            <SheetTitle>Add New Car</SheetTitle>
+            <SheetTitle>{initialData ? "Clone Car" : "Add New Car"}</SheetTitle>
             <SheetDescription>
-              Enter the details of the new car below. Click &quot;Add&quot; to save.
+              Enter the details of the {initialData ? "cloned" : "new"} car below. Click &quot;{initialData ? "Clone" : "Add"}&quot; to save.
             </SheetDescription>
           </SheetHeader>
           <form
@@ -285,83 +297,53 @@ const CarAdd: React.FC<CarAddProps> = ({ onCarAdded }) => {
               <label htmlFor="year" className="text-sm font-medium">
                 Year
               </label>
-              <select
+              <MultiSelect
                 id="year"
-                name="year"
-                value={newCar.year}
-                onChange={handleInputChange}
-                required
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Select Year</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+                options={years.map(year => ({ value: year.toString(), text: year.toString() }))}
+                onSelect={handleYearSelect}
+                placeholder="Select year"
+                allowCustomInput
+                initialValue={initialData?.year ? initialData.year.toString() : undefined}
+              />
             </div>
             <div>
               <label htmlFor="maker" className="text-sm font-medium">
                 Make
               </label>
-              <select
+              <MultiSelect
                 id="maker"
-                name="maker"
-                value={newCar.maker}
-                onChange={handleInputChange}
-                required
-                className="w-full p-2 border rounded"
-                disabled={!newCar.year || makes.length === 0}
-              >
-                <option value="">Select Make</option>
-                {makes.map((make) => (
-                  <option key={make} value={make}>
-                    {make}
-                  </option>
-                ))}
-              </select>
+                options={makes.map(make => ({ value: make, text: make }))}
+                onSelect={handleMakeSelect}
+                placeholder="Select or enter make"
+                allowCustomInput
+                initialValue={initialData?.maker}
+              />
             </div>
             <div>
               <label htmlFor="model" className="text-sm font-medium">
                 Model
               </label>
-              <select
+              <MultiSelect
                 id="model"
-                name="model"
-                value={newCar.model}
-                onChange={handleInputChange}
-                required
-                className="w-full p-2 border rounded"
-                disabled={!newCar.maker || models.length === 0}
-              >
-                <option value="">Select Model</option>
-                {models.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
+                options={models.map(model => ({ value: model, text: model }))}
+                onSelect={handleModelSelect}
+                placeholder="Select or enter model"
+                allowCustomInput
+                initialValue={initialData?.model}
+              />
             </div>
             <div>
               <label htmlFor="trim" className="text-sm font-medium">
                 Trim
               </label>
-              <select
+              <MultiSelect
                 id="trim"
-                name="trim"
-                value={newCar.trim}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded"
-                disabled={!newCar.model || trims.length === 0}
-              >
-                <option value="">Select Trim</option>
-                {trims.map((trim) => (
-                  <option key={trim} value={trim}>
-                    {trim}
-                  </option>
-                ))}
-              </select>
+                options={trims.map(trim => ({ value: trim, text: trim }))}
+                onSelect={handleTrimSelect}
+                placeholder="Select or enter trim"
+                allowCustomInput
+                initialValue={initialData?.trim}
+              />
             </div>
             <div>
               <label htmlFor="category1" className="text-sm font-medium">

@@ -2,32 +2,27 @@
 
 import { Customer } from "@/types/customer1";
 import axios from "axios";
-import { Search, Send } from "lucide-react";
+import { Search, Send, Star } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-
-// interface Customer {
-//   id: string;
-//   name: string;
-//   unreadCount: number;
-//   lastMessage: string;
-//   lastMessageTime: string;
-// }
-
-interface UserDetails {
-  userId: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  // Add other relevant user fields as needed
-}
+import { Switch } from "@/components/ui/switch";
 
 interface Message {
-  customerId: string;
+  userId: string;
   message: string;
   isAdmin: boolean;
   timestamp: string;
+  _id?: string;
+}
+
+interface ExtendedCustomer extends Customer {
+  unreadCount: number;
+  lastMessage: string;
+  lastMessageTime: string;
+  firstName?: string;
+  lastName?: string;
+  goldenMember: boolean;
 }
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
@@ -36,49 +31,78 @@ const CustomerSupport = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [userDetails, setUserDetails] = useState<UserDetails[]>([]);
+  const [customers, setCustomers] = useState<ExtendedCustomer[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [polling, setPolling] = useState<NodeJS.Timeout | null>(null);
-  const [customerList, setCustomerList] = useState<Customer[]>([]);
   const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, string>>({});
+  const [showGoldenOnly, setShowGoldenOnly] = useState(false);
 
   useEffect(() => {
     const fetchCustomers = async () => {
-      const response = await axios.post(`${API_BASE_URL}/query`, {
-        path: "customers:getAllCustomers",
-        args: {}
-      });
-      setCustomers(response.data.value);
-
-      if (response.data.value?.length) {
-        const userResponse = await axios.post(`${API_BASE_URL}/query`, {
-          path: "users:getManyUsers",
-          args: { userIds: response.data.value.map((c: { userId: string }) => c.userId) }
+      try {
+        // Get customers with their details
+        const response = await axios.post(`${API_BASE_URL}/query`, {
+          path: "customers:getAllCustomers",
+          args: {}
         });
-        setUserDetails(userResponse.data.value);
+
+        if (response.data.value?.length) {
+          // Get user details for each customer
+          const userResponse = await axios.post(`${API_BASE_URL}/query`, {
+            path: "users:getManyUsers",
+            args: { userIds: response.data.value.map((c: { userId: string }) => c.userId) }
+          });
+
+          // Combine customer and user data
+          const combinedData = response.data.value.map((customer: Customer) => {
+            const user = userResponse.data.value?.find((u: any) => u.userId === customer.userId);
+            return {
+              ...customer,
+              firstName: user?.firstName || '',
+              lastName: user?.lastName || '',
+              name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+              unreadCount: 0,
+              lastMessage: '',
+              lastMessageTime: '',
+              goldenMember: customer.goldenMember || false
+            };
+          });
+
+          setCustomers(combinedData);
+        }
+      } catch (error) {
+        console.error('Error fetching customers:', error);
       }
     };
+
     fetchCustomers();
+    // Fetch customers every 5 minutes
+    const interval = setInterval(fetchCustomers, 300000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchMessages = async () => {
     if (!selectedCustomer) return;
-    const response = await axios.post(`${API_BASE_URL}/query`, {
-      path: "chat:getMessagesByCustomerId",
-      args: { customerId: selectedCustomer }
-    });
-    setMessages(response.data.value);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        path: "chat:getMessagesByCustomerId",
+        args: { userId: selectedCustomer }
+      });
+      
+      if (response.data.value) {
+        setMessages(response.data.value);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
   };
 
   useEffect(() => {
     if (selectedCustomer) {
       fetchMessages();
-
       const interval = setInterval(fetchMessages, 1000);
       setPolling(interval);
-
       return () => {
         clearInterval(interval);
         setPolling(null);
@@ -89,18 +113,22 @@ const CustomerSupport = () => {
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedCustomer) return;
     
-    await axios.post(`${API_BASE_URL}/mutation`, {
-      path: "chat:sendMessage",
-      args: {
-        customerId: selectedCustomer,
-        message: message.trim(),
-        isAdmin: true,
-        timestamp: new Date().toISOString(),
-      }
-    });
-    
-    setMessage("");
-    await fetchMessages();
+    try {
+      await axios.post(`${API_BASE_URL}/mutation`, {
+        path: "chat:sendMessage",
+        args: {
+          userId: selectedCustomer,
+          message: message.trim(),
+          isAdmin: true,
+          timestamp: new Date().toISOString(),
+        }
+      });
+      
+      setMessage("");
+      await fetchMessages();
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const scrollToBottom = () => {
@@ -112,29 +140,54 @@ const CustomerSupport = () => {
   }, [messages]);
 
   useEffect(() => {
-    const updatedCustomerList = customers?.map(customer => {
-      const user = userDetails?.find((u: UserDetails) => u.userId === customer.userId);
-      const customerMessages = messages.filter(m => m.customerId === customer.userId);
-      const lastMessage = customerMessages.length > 0 
-        ? customerMessages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
-        : null;
-      
-      const lastReadTime = lastReadTimestamps[customer.userId] || '1970-01-01T00:00:00.000Z';
-      const unreadCount = customerMessages.filter(
-        msg => !msg.isAdmin && new Date(msg.timestamp) > new Date(lastReadTime)
-      ).length;
-      
-      return {
-        id: customer.userId,
-        name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-        unreadCount,
-        lastMessage: lastMessage?.message ?? "",
-        lastMessageTime: lastMessage?.timestamp ?? "",
-      };
-    }) ?? [];
-    
-    setCustomerList(updatedCustomerList as Customer[]);
-  }, [customers, userDetails, messages, lastReadTimestamps]);
+    const updateCustomerList = async () => {
+      const updatedCustomers = await Promise.all(customers.map(async (customer) => {
+        try {
+          // Get unread message count
+          const unreadResponse = await axios.post(`${API_BASE_URL}/query`, {
+            path: "analytics:getUnreadMessageCount",
+            args: {
+              userId: customer.userId,
+              lastReadTimestamp: lastReadTimestamps[customer.userId] || '1970-01-01T00:00:00.000Z'
+            }
+          });
+
+          // Get last message
+          const lastMessageResponse = await axios.post(`${API_BASE_URL}/query`, {
+            path: "analytics:getLastMessage",
+            args: { userId: customer.userId }
+          });
+
+          const lastMessage = lastMessageResponse.data.value;
+          
+          return {
+            ...customer,
+            unreadCount: unreadResponse.data.value || 0,
+            lastMessage: lastMessage?.message || "",
+            lastMessageTime: lastMessage?.timestamp || "",
+          };
+        } catch (error) {
+          console.error('Error updating customer data:', error);
+          return customer;
+        }
+      }));
+
+      // Sort customers: pending messages first, then golden members, then by last message time
+      const sortedCustomers = updatedCustomers.sort((a, b) => {
+        if (a.unreadCount !== b.unreadCount) {
+          return b.unreadCount - a.unreadCount;
+        }
+        if (a.goldenMember !== b.goldenMember) {
+          return b.goldenMember ? 1 : -1;
+        }
+        return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime();
+      });
+
+      setCustomers(sortedCustomers);
+    };
+
+    updateCustomerList();
+  }, [customers, lastReadTimestamps]);
 
   const handleCustomerSelect = (customerId: string) => {
     setSelectedCustomer(customerId);
@@ -143,6 +196,15 @@ const CustomerSupport = () => {
       [customerId]: new Date().toISOString()
     }));
   };
+
+  const filteredCustomers = customers.filter(customer => {
+    const matchesSearch = 
+      (customer.firstName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (customer.lastName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      customer.userId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGolden = !showGoldenOnly || customer.goldenMember;
+    return matchesSearch && matchesGolden;
+  });
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -153,37 +215,46 @@ const CustomerSupport = () => {
             <h4 className="text-xl font-semibold text-black dark:text-white mb-4">
               Customer Chats
             </h4>
-            <div className="relative">
+            <div className="relative mb-4">
               <Input
                 type="text"
-                placeholder="Search by ID or name..."
+                placeholder="Search by name or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={showGoldenOnly}
+                onCheckedChange={setShowGoldenOnly}
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Show Golden Members Only</span>
+            </div>
           </div>
 
           <div className="overflow-y-auto h-[calc(100vh-300px)]">
-            {customerList.map((customer) => (
+            {filteredCustomers.map((customer) => (
               <div
-                key={customer.id}
-                onClick={() => handleCustomerSelect(customer.id ?? '')}
+                key={customer.userId}
+                onClick={() => handleCustomerSelect(customer.userId)}
                 className={`p-4 border-b border-stroke dark:border-strokedark cursor-pointer hover:bg-gray-100 dark:hover:bg-meta-4 ${
-                  selectedCustomer === customer.id
+                  selectedCustomer === customer.userId
                     ? "bg-gray-100 dark:bg-meta-4"
                     : ""
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <div>
+                  <div className="flex items-center gap-2">
                     <h5 className="font-semibold text-black dark:text-white">
-                      {customer.name}
+                      {customer.firstName} {customer.lastName}
                     </h5>
-                    <p className="text-sm text-gray-500">ID: {customer.id}</p>
+                    {customer.goldenMember && (
+                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                    )}
                   </div>
-                  {customer.unreadCount && customer.unreadCount > 0 && (
+                  {customer.unreadCount > 0 && (
                     <span className="bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {customer.unreadCount}
                     </span>
@@ -194,7 +265,7 @@ const CustomerSupport = () => {
                     {customer.lastMessage}
                   </p>
                   <span className="text-xs text-gray-400">
-                    {customer.lastMessageTime}
+                    {customer.lastMessageTime ? new Date(customer.lastMessageTime).toLocaleTimeString() : ''}
                   </span>
                 </div>
               </div>
@@ -208,18 +279,24 @@ const CustomerSupport = () => {
             <>
               {/* Chat header */}
               <div className="p-4 border-b border-stroke dark:border-strokedark">
-                <h4 className="text-xl font-semibold text-black dark:text-white">
-                  {customerList.find(c => c.id === selectedCustomer)?.name}
-                </h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xl font-semibold text-black dark:text-white">
+                    {customers.find(c => c.userId === selectedCustomer)?.firstName} {customers.find(c => c.userId === selectedCustomer)?.lastName}
+                  </h4>
+                  {customers.find(c => c.userId === selectedCustomer)?.goldenMember && (
+                    <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                  )}
+                </div>
                 <p className="text-sm text-gray-500">ID: {selectedCustomer}</p>
               </div>
 
               {/* Chat messages */}
               <div className="flex-1 overflow-y-auto p-4 flex flex-col">
-                {messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                {messages
+                  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                   .map((msg, index) => (
                     <div 
-                      key={index} 
+                      key={msg._id || index} 
                       className={`mb-4 flex ${msg.isAdmin ? 'justify-end' : 'justify-start'}`}
                     >
                       <div className={`rounded-lg p-3 max-w-[70%] ${

@@ -33,7 +33,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
       const token = searchParams?.get('token');
       
       if (!token) {
-        window.location.href = 'http://localhost:3001/Login';
+        window.location.href = 'https://final-project-customer-rosy.vercel.app/Login';
         return;
       }
 
@@ -42,18 +42,11 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
           path: "verify:verifyStaffToken",
           args: { token }
         });
-    
+        console.log(response.data,'HJHH');
         if (response.data.status !== 'success') {
           window.location.href = 'https://car-rental-fullstack.vercel.app';
           return;
         }
-
-        const getUser = await axios.post(`${API_BASE_URL}/query`, {
-          path: "users:getUserByEmail",
-          args: { email: response.data.value.staffMember.email }
-        });
-
-        console.log(getUser.data.value,'HJHH');
 
         // Store email in localStorage
         localStorage.setItem('staffEmail', response.data.value.staffMember.email);
@@ -62,7 +55,7 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
         setLoading(false);
       } catch (error) {
         console.error('Auth error:', error);
-        window.location.href = 'https://google.com';
+        // window.location.href = 'https://google.com';
       }
     };
 
