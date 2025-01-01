@@ -123,7 +123,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           ))}
           {allowCustomInput && filteredOptions.length === 0 && inputValue && (
             <div className="px-4 py-2 text-gray-500 dark:text-gray-400">
-              Press Enter to use "{inputValue}"
+              Press Enter to use &quot;{inputValue}&quot;
             </div>
           )}
         </div>

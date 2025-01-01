@@ -318,6 +318,8 @@ const CustomersTable = () => {
         const aValue = a[sortConfig.key as keyof typeof a];
         const bValue = b[sortConfig.key as keyof typeof b];
         
+        if (aValue === undefined) return 1;
+        if (bValue === undefined) return -1;
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;

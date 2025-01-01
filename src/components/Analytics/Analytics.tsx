@@ -108,8 +108,8 @@ const ExpandedChart = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-6xl">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-end p-4">
+      <div className="bg-white rounded-lg w-[calc(100%-280px)] max-w-5xl mr-4">
         <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-semibold">{title}</h2>
           <div className="flex items-center gap-4">
@@ -129,7 +129,7 @@ const ExpandedChart = ({
           </div>
         </div>
         <div className="p-6">
-          <div className="h-[600px]">
+          <div className="h-[500px]">
             {typeof children === 'function' ? children(period) : children}
           </div>
         </div>
@@ -146,6 +146,22 @@ interface ChartDatum {
 interface BarChartDatum {
   [key: string]: string | number;
 }
+
+const formatDateForPeriod = (dateStr: string, period: Period) => {
+  const date = new Date(dateStr);
+  switch (period) {
+    case 'week':
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    case 'month':
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    case 'quarter':
+      return date.toLocaleDateString('en-US', { month: 'short' });
+    case 'year':
+      return date.toLocaleDateString('en-US', { month: 'short' });
+    default:
+      return date.toLocaleDateString();
+  }
+};
 
 const Analytics = () => {
   const [period, setPeriod] = useState<Period>('week');
@@ -208,8 +224,111 @@ const Analytics = () => {
     XLSX.writeFile(wb, `${filename}.xlsx`);
   };
 
+  const handleExportAllData = () => {
+    // Transform daily metrics into arrays for better Excel formatting
+    const dailyMetrics = Object.entries(revenueMetrics?.dailyRevenue ?? {}).map(([date, revenue]) => {
+      const bookings = bookingMetrics?.dailyBookings?.[date] ?? 0;
+      const performance = performanceMetrics?.dailyMetrics?.[date] ?? { revenue: 0, bookings: 0 };
+      
+      return {
+        Date: date,
+        Revenue: revenue,
+        Bookings: bookings,
+        PerformanceRevenue: performance.revenue,
+        PerformanceBookings: performance.bookings
+      };
+    });
+
+    // Customer metrics sheet
+    const customerSheet = [
+      { Metric: 'Total Customers', Value: customerMetrics?.totalCustomers ?? 0 },
+      { Metric: 'Active Customers', Value: customerMetrics?.activeCustomers ?? 0 },
+      { Metric: 'Golden Members', Value: customerMetrics?.goldenMembers ?? 0 },
+      { Metric: 'Customer Activity Rate', Value: `${customerMetrics?.customerActivityRate ?? 0}%` },
+      { Metric: 'Golden Member Rate', Value: `${customerMetrics?.goldenMemberRate ?? 0}%` }
+    ];
+
+    // Booking locations sheet
+    const locationSheet = Object.entries(bookingMetrics?.pickupLocations ?? {}).map(([location, count]) => ({
+      Location: location,
+      Bookings: count
+    }));
+
+    // Extras usage sheet
+    const extrasSheet = Object.entries(bookingMetrics?.extrasUsage ?? {}).map(([extra, count]) => ({
+      Extra: extra,
+      Usage: count
+    }));
+
+    // Car metrics sheet
+    const carSheet = [
+      { Metric: 'Total Cars', Value: carMetrics?.totalCars ?? 0 },
+      { Metric: 'Available Cars', Value: carMetrics?.availableCars ?? 0 },
+      { Metric: 'Fleet Utilization Rate', Value: `${carMetrics?.fleetUtilizationRate ?? 0}%` }
+    ];
+
+    // Car categories sheet
+    const categoriesSheet = Object.entries(carMetrics?.popularCategories ?? {}).map(([category, count]) => ({
+      Category: category,
+      Count: count
+    }));
+
+    // Car ratings sheet
+    const ratingsSheet = Object.entries(carMetrics?.carRatings ?? {}).map(([model, rating]) => ({
+      Model: model,
+      Rating: rating
+    }));
+
+    // Popular cars sheet
+    const popularCarsSheet = Object.entries(popularCarsMetrics?.carRentals ?? {}).map(([model, rentals]) => ({
+      Model: model,
+      Rentals: rentals
+    }));
+
+    // Category rentals sheet
+    const categoryRentalsSheet = Object.entries(popularCarsMetrics?.categoryRentals ?? {}).map(([category, rentals]) => ({
+      Category: category,
+      Rentals: rentals
+    }));
+
+    // Performance metrics sheet
+    const performanceSheet = [
+      { Metric: 'Booking Success Rate', Value: `${performanceMetrics?.bookingSuccessRate ?? 0}%` },
+      { Metric: 'Average Booking Value', Value: performanceMetrics?.averageBookingValue ?? 0 }
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Add all sheets
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailyMetrics), 'Daily Metrics');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerSheet), 'Customer Metrics');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(locationSheet), 'Pickup Locations');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(extrasSheet), 'Extras Usage');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(carSheet), 'Car Metrics');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(categoriesSheet), 'Car Categories');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ratingsSheet), 'Car Ratings');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(popularCarsSheet), 'Popular Cars');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(categoryRentalsSheet), 'Category Rentals');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(performanceSheet), 'Performance Metrics');
+
+    // Save the file
+    XLSX.writeFile(wb, `car_rental_analytics_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   return (
     <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+        <Button 
+          onClick={handleExportAllData}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Export All Analytics
+        </Button>
+      </div>
+      
       <div className="grid gap-6">
         {/* Revenue Section */}
         <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -233,32 +352,113 @@ const Analytics = () => {
                     data={[
                       {
                         id: "revenue",
-                        data: Object.entries(revenueMetrics?.dailyRevenue ?? {}).map(([date, value]) => ({
-                          x: new Date(date).toLocaleDateString(),
-                          y: Number(value) || 0
-                        })) as ChartDatum[]
+                        data: Object.entries(revenueMetrics?.dailyRevenue ?? {})
+                          .map(([date, value]) => ({
+                            x: formatDateForPeriod(date, period),
+                            y: Number(value) || 0
+                          }))
+                          .reduce((acc, curr) => {
+                            const existingPoint = acc.find(point => point.x === curr.x);
+                            if (existingPoint) {
+                              existingPoint.y += curr.y;
+                            } else {
+                              acc.push(curr);
+                            }
+                            return acc;
+                          }, [] as ChartDatum[])
+                          .sort((a, b) => {
+                            const dateA = new Date(String(a.x));
+                            const dateB = new Date(String(b.x));
+                            return dateA.getTime() - dateB.getTime();
+                          })
                       }
                     ]}
-                    margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+                    margin={{ top: 50, right: 60, bottom: 70, left: 70 }}
                     xScale={{ type: 'point' }}
-                    yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                    yScale={{ 
+                      type: 'linear',
+                      min: 'auto',
+                      max: 'auto',
+                      stacked: false,
+                      reverse: false
+                    }}
                     curve="monotoneX"
                     axisTop={null}
                     axisRight={null}
                     axisBottom={{
-                      tickSize: 5,
-                      tickPadding: 5,
-                      tickRotation: -45
+                      tickSize: 8,
+                      tickPadding: 8,
+                      tickRotation: period === 'week' ? -45 : -30,
+                      legend: 'Date',
+                      legendOffset: 60,
+                      legendPosition: 'middle',
+                      tickValues: period === 'year' ? 12 : period === 'quarter' ? 8 : undefined
                     }}
                     axisLeft={{
-                      tickSize: 5,
-                      tickPadding: 5,
-                      tickRotation: 0
+                      tickSize: 8,
+                      tickPadding: 8,
+                      tickRotation: 0,
+                      legend: 'Revenue ($)',
+                      legendOffset: -50,
+                      legendPosition: 'middle',
+                      format: (value) => 
+                        typeof value === 'number' 
+                          ? value >= 1000
+                            ? `$${(value / 1000).toFixed(0)}k`
+                            : `$${value}`
+                          : value.toString()
                     }}
-                    enablePoints={false}
+                    enableGridX={true}
+                    enableGridY={true}
+                    enablePoints={true}
+                    pointSize={8}
+                    pointColor={{ theme: 'background' }}
+                    pointBorderWidth={2}
+                    pointBorderColor="#2563eb"
                     enableArea={true}
                     areaOpacity={0.15}
                     colors={["#2563eb"]}
+                    useMesh={true}
+                    theme={{
+                      axis: {
+                        domain: {
+                          line: {
+                            stroke: '#64748b',
+                            strokeWidth: 1
+                          }
+                        },
+                        ticks: {
+                          line: {
+                            stroke: '#64748b',
+                            strokeWidth: 1
+                          },
+                          text: {
+                            fill: '#64748b',
+                            fontSize: 12
+                          }
+                        },
+                        legend: {
+                          text: {
+                            fill: '#1e293b',
+                            fontSize: 14,
+                            fontWeight: 600
+                          }
+                        }
+                      },
+                      grid: {
+                        line: {
+                          stroke: '#e2e8f0',
+                          strokeWidth: 1
+                        }
+                      },
+                      crosshair: {
+                        line: {
+                          stroke: '#64748b',
+                          strokeWidth: 1,
+                          strokeOpacity: 0.35
+                        }
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -313,26 +513,51 @@ const Analytics = () => {
                 </div>
                 <div className="flex-1 min-h-0">
                   <ResponsiveBar
-                    data={Object.entries(bookingMetrics?.dailyBookings ?? {}).map(([date, count]) => ({
-                      date: new Date(date).toLocaleDateString(),
-                      bookings: Number(count) || 0,
-                      value: Number(count) || 0
-                    })) as BarChartDatum[]}
+                    data={Object.entries(bookingMetrics?.dailyBookings ?? {})
+                      .map(([date, count]) => ({
+                        date: formatDateForPeriod(date, period),
+                        bookings: Number(count) || 0,
+                        value: Number(count) || 0
+                      }))
+                      .reduce((acc, curr) => {
+                        const existing = acc.find(item => item.date === curr.date);
+                        if (existing) {
+                          existing.bookings = (existing.bookings as number) + (curr.bookings as number);
+                          existing.value = (existing.value as number) + (curr.value as number);
+                        } else {
+                          acc.push(curr);
+                        }
+                        return acc;
+                      }, [] as BarChartDatum[])
+                      .sort((a, b) => {
+                        const dateA = new Date(String(a.date));
+                        const dateB = new Date(String(b.date));
+                        return dateA.getTime() - dateB.getTime();
+                      })
+                    }
                     keys={['bookings']}
                     indexBy="date"
-                    margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+                    margin={{ top: 40, right: 40, bottom: 60, left: 60 }}
                     padding={0.3}
                     colors={["#2563eb"]}
                     axisBottom={{
                       tickSize: 5,
                       tickPadding: 5,
-                      tickRotation: -45
+                      tickRotation: period === 'week' ? -45 : -30,
+                      legend: 'Date',
+                      legendOffset: 50,
+                      tickValues: period === 'year' ? 12 : period === 'quarter' ? 8 : undefined
                     }}
                     axisLeft={{
                       tickSize: 5,
                       tickPadding: 5,
-                      tickRotation: 0
+                      tickRotation: 0,
+                      legend: 'Number of Bookings',
+                      legendOffset: -50
                     }}
+                    labelSkipWidth={12}
+                    labelSkipHeight={12}
+                    labelTextColor="#ffffff"
                   />
                 </div>
               </div>
@@ -358,14 +583,56 @@ const Analytics = () => {
                   <ResponsiveLine
                     data={[
                       {
-                        id: "performance",
-                        data: Object.entries(performanceMetrics?.dailyMetrics ?? {}).map(([date, metrics]: [string, any]) => ({
-                          x: new Date(date).toLocaleDateString(),
-                          y: Number(metrics.revenue) || 0
-                        })) as ChartDatum[]
+                        id: "revenue",
+                        data: Object.entries(performanceMetrics?.dailyMetrics ?? {})
+                          .map(([date, metrics]: [string, any]) => ({
+                            x: formatDateForPeriod(date, period),
+                            y: Number(metrics.revenue) || 0
+                          }))
+                          .reduce((acc, curr) => {
+                            const existingPoint = acc.find(point => point.x === curr.x);
+                            if (existingPoint) {
+                              existingPoint.y = (existingPoint.y as number) + (curr.y as number);
+                            } else {
+                              acc.push(curr);
+                            }
+                            return acc;
+                          }, [] as ChartDatum[])
+                          .sort((a, b) => {
+                            const dateA = new Date(String(a.x));
+                            const dateB = new Date(String(b.x));
+                            return dateA.getTime() - dateB.getTime();
+                          })
+                      },
+                      {
+                        id: "bookings",
+                        data: Object.entries(performanceMetrics?.dailyMetrics ?? {})
+                          .map(([date, metrics]: [string, any]) => {
+                            // Scale up bookings to match revenue scale
+                            const bookings = Number(metrics.bookings) || 0;
+                            const scaledValue = bookings * (performanceMetrics?.averageBookingValue ?? 1000);
+                            return {
+                              x: formatDateForPeriod(date, period),
+                              y: scaledValue
+                            };
+                          })
+                          .reduce((acc, curr) => {
+                            const existingPoint = acc.find(point => point.x === curr.x);
+                            if (existingPoint) {
+                              existingPoint.y = (existingPoint.y as number) + (curr.y as number);
+                            } else {
+                              acc.push(curr);
+                            }
+                            return acc;
+                          }, [] as ChartDatum[])
+                          .sort((a, b) => {
+                            const dateA = new Date(String(a.x));
+                            const dateB = new Date(String(b.x));
+                            return dateA.getTime() - dateB.getTime();
+                          })
                       }
                     ]}
-                    margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+                    margin={{ top: 40, right: 120, bottom: 60, left: 60 }}
                     xScale={{ type: 'point' }}
                     yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
                     curve="monotoneX"
@@ -374,17 +641,43 @@ const Analytics = () => {
                     axisBottom={{
                       tickSize: 5,
                       tickPadding: 5,
-                      tickRotation: -45
+                      tickRotation: period === 'week' ? -45 : -30,
+                      legend: 'Date',
+                      legendOffset: 50,
+                      tickValues: period === 'year' ? 12 : period === 'quarter' ? 8 : undefined
                     }}
                     axisLeft={{
                       tickSize: 5,
                       tickPadding: 5,
-                      tickRotation: 0
+                      tickRotation: 0,
+                      legend: 'Value',
+                      legendOffset: -50
                     }}
-                    enablePoints={false}
+                    enablePoints={true}
+                    pointSize={8}
+                    pointColor={{ theme: 'background' }}
+                    pointBorderWidth={2}
+                    pointBorderColor={{ from: 'color' }}
                     enableArea={true}
                     areaOpacity={0.15}
-                    colors={["#2563eb"]}
+                    useMesh={true}
+                    legends={[
+                      {
+                        anchor: 'right',
+                        direction: 'column',
+                        justify: false,
+                        translateX: 100,
+                        translateY: 0,
+                        itemsSpacing: 0,
+                        itemWidth: 100,
+                        itemHeight: 20,
+                        itemTextColor: '#999',
+                        itemDirection: 'left-to-right',
+                        itemOpacity: 1,
+                        symbolSize: 18,
+                        symbolShape: 'square'
+                      }
+                    ]}
                   />
                 </div>
               </div>
@@ -483,10 +776,25 @@ const Analytics = () => {
             data={[
               {
                 id: "revenue",
-                data: Object.entries(revenueMetrics?.dailyRevenue ?? {}).map(([date, value]) => ({
-                  x: new Date(date).toLocaleDateString(),
-                  y: Number(value) || 0
-                })) as ChartDatum[]
+                data: Object.entries(revenueMetrics?.dailyRevenue ?? {})
+                  .map(([date, value]) => ({
+                    x: formatDateForPeriod(date, currentPeriod),
+                    y: Number(value) || 0
+                  }))
+                  .reduce((acc, curr) => {
+                    const existingPoint = acc.find(point => point.x === curr.x);
+                    if (existingPoint) {
+                      existingPoint.y += curr.y;
+                    } else {
+                      acc.push(curr);
+                    }
+                    return acc;
+                  }, [] as ChartDatum[])
+                  .sort((a, b) => {
+                    const dateA = new Date(String(a.x));
+                    const dateB = new Date(String(b.x));
+                    return dateA.getTime() - dateB.getTime();
+                  })
               }
             ]}
             margin={{ top: 50, right: 60, bottom: 70, left: 70 }}
@@ -504,10 +812,11 @@ const Analytics = () => {
             axisBottom={{
               tickSize: 8,
               tickPadding: 8,
-              tickRotation: -45,
+              tickRotation: currentPeriod === 'week' ? -45 : -30,
               legend: 'Date',
               legendOffset: 60,
-              legendPosition: 'middle'
+              legendPosition: 'middle',
+              tickValues: currentPeriod === 'year' ? 12 : currentPeriod === 'quarter' ? 8 : undefined
             }}
             axisLeft={{
               tickSize: 8,
@@ -518,7 +827,9 @@ const Analytics = () => {
               legendPosition: 'middle',
               format: (value) => 
                 typeof value === 'number' 
-                  ? `$${value.toLocaleString()}`
+                  ? value >= 1000
+                    ? `$${(value / 1000).toFixed(0)}k`
+                    : `$${value}`
                   : value.toString()
             }}
             enableGridX={true}
@@ -629,11 +940,28 @@ const Analytics = () => {
       >
         {(currentPeriod: Period): JSX.Element => (
           <ResponsiveBar
-            data={Object.entries(bookingMetrics?.dailyBookings ?? {}).map(([date, count]) => ({
-              date: new Date(date).toLocaleDateString(),
-              bookings: Number(count) || 0,
-              value: Number(count) || 0
-            })) as BarChartDatum[]}
+            data={Object.entries(bookingMetrics?.dailyBookings ?? {})
+              .map(([date, count]) => ({
+                date: formatDateForPeriod(date, currentPeriod),
+                bookings: Number(count) || 0,
+                value: Number(count) || 0
+              }))
+              .reduce((acc, curr) => {
+                const existing = acc.find(item => item.date === curr.date);
+                if (existing) {
+                  existing.bookings = (existing.bookings as number) + (curr.bookings as number);
+                  existing.value = (existing.value as number) + (curr.value as number);
+                } else {
+                  acc.push(curr);
+                }
+                return acc;
+              }, [] as BarChartDatum[])
+              .sort((a, b) => {
+                const dateA = new Date(String(a.date));
+                const dateB = new Date(String(b.date));
+                return dateA.getTime() - dateB.getTime();
+              })
+            }
             keys={['bookings']}
             indexBy="date"
             margin={{ top: 40, right: 40, bottom: 60, left: 60 }}
@@ -642,9 +970,10 @@ const Analytics = () => {
             axisBottom={{
               tickSize: 5,
               tickPadding: 5,
-              tickRotation: -45,
+              tickRotation: currentPeriod === 'week' ? -45 : -30,
               legend: 'Date',
-              legendOffset: 50
+              legendOffset: 50,
+              tickValues: currentPeriod === 'year' ? 12 : currentPeriod === 'quarter' ? 8 : undefined
             }}
             axisLeft={{
               tickSize: 5,
@@ -672,46 +1001,109 @@ const Analytics = () => {
             data={[
               {
                 id: "revenue",
-                data: Object.entries(performanceMetrics?.dailyMetrics ?? {}).map(([date, metrics]: [string, any]) => ({
-                  x: new Date(date).toLocaleDateString(),
-                  y: Number(metrics.revenue) || 0
-                })) as ChartDatum[]
+                data: Object.entries(performanceMetrics?.dailyMetrics ?? {})
+                  .map(([date, metrics]: [string, any]) => ({
+                    x: formatDateForPeriod(date, currentPeriod),
+                    y: Number(metrics.revenue) || 0
+                  }))
+                  .reduce((acc, curr) => {
+                    const existingPoint = acc.find(point => point.x === curr.x);
+                    if (existingPoint) {
+                      existingPoint.y = (existingPoint.y as number) + (curr.y as number);
+                    } else {
+                      acc.push(curr);
+                    }
+                    return acc;
+                  }, [] as ChartDatum[])
+                  .sort((a, b) => {
+                    const dateA = new Date(String(a.x));
+                    const dateB = new Date(String(b.x));
+                    return dateA.getTime() - dateB.getTime();
+                  })
               },
               {
                 id: "bookings",
-                data: Object.entries(performanceMetrics?.dailyMetrics ?? {}).map(([date, metrics]: [string, any]) => ({
-                  x: new Date(date).toLocaleDateString(),
-                  y: Number(metrics.bookings) || 0
-                })) as ChartDatum[]
+                data: Object.entries(performanceMetrics?.dailyMetrics ?? {})
+                  .map(([date, metrics]: [string, any]) => {
+                    // Scale up bookings to match revenue scale
+                    const bookings = Number(metrics.bookings) || 0;
+                    const scaledValue = bookings * (performanceMetrics?.averageBookingValue ?? 1000);
+                    return {
+                      x: formatDateForPeriod(date, currentPeriod),
+                      y: scaledValue
+                    };
+                  })
+                  .reduce((acc, curr) => {
+                    const existingPoint = acc.find(point => point.x === curr.x);
+                    if (existingPoint) {
+                      existingPoint.y = (existingPoint.y as number) + (curr.y as number);
+                    } else {
+                      acc.push(curr);
+                    }
+                    return acc;
+                  }, [] as ChartDatum[])
+                  .sort((a, b) => {
+                    const dateA = new Date(String(a.x));
+                    const dateB = new Date(String(b.x));
+                    return dateA.getTime() - dateB.getTime();
+                  })
               }
             ]}
             margin={{ top: 40, right: 120, bottom: 60, left: 60 }}
             xScale={{ type: 'point' }}
-            yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
-            curve="monotoneX"
+            yScale={{
+              type: 'linear',
+              min: 'auto',
+              max: 'auto',
+              stacked: false,
+              reverse: false
+            }}
+            yFormat={value => {
+              if (typeof value === 'number') {
+                return value >= 1000
+                  ? `$${(value / 1000).toFixed(1)}k`
+                  : `$${value}`;
+              }
+              return value.toString();
+            }}
             axisTop={null}
-            axisRight={null}
+            axisRight={{
+              tickSize: 5,
+              tickPadding: 5,
+              tickRotation: 0,
+              legend: 'Number of Bookings',
+              legendOffset: 70,
+              format: value => Math.round(Number(value))
+            }}
             axisBottom={{
               tickSize: 5,
               tickPadding: 5,
-              tickRotation: -45,
+              tickRotation: currentPeriod === 'week' ? -45 : -30,
               legend: 'Date',
-              legendOffset: 50
+              legendOffset: 50,
+              tickValues: currentPeriod === 'year' ? 12 : currentPeriod === 'quarter' ? 8 : undefined
             }}
             axisLeft={{
               tickSize: 5,
               tickPadding: 5,
               tickRotation: 0,
-              legend: 'Value',
-              legendOffset: -50
+              legend: 'Revenue ($)',
+              legendOffset: -50,
+              format: value => 
+                typeof value === 'number' 
+                  ? value >= 1000
+                    ? `$${(value / 1000).toFixed(0)}k`
+                    : `$${value}`
+                  : value.toString()
             }}
             enablePoints={true}
             pointSize={8}
             pointColor={{ theme: 'background' }}
             pointBorderWidth={2}
-            pointBorderColor={{ from: 'color' }}
-            enableArea={true}
-            areaOpacity={0.15}
+            pointBorderColor={{ from: 'serieColor' }}
+            enableGridX={true}
+            enableGridY={true}
+            colors={["#2563eb", "#f97316"]}
             useMesh={true}
             legends={[
               {
@@ -723,13 +1115,61 @@ const Analytics = () => {
                 itemsSpacing: 0,
                 itemWidth: 100,
                 itemHeight: 20,
-                itemTextColor: '#999',
+                itemTextColor: '#64748b',
                 itemDirection: 'left-to-right',
                 itemOpacity: 1,
-                symbolSize: 18,
-                symbolShape: 'square'
+                symbolSize: 12,
+                symbolShape: 'circle',
+                effects: [
+                  {
+                    on: 'hover',
+                    style: {
+                      itemTextColor: '#1e293b'
+                    }
+                  }
+                ]
               }
             ]}
+            theme={{
+              axis: {
+                domain: {
+                  line: {
+                    stroke: '#64748b',
+                    strokeWidth: 1
+                  }
+                },
+                ticks: {
+                  line: {
+                    stroke: '#64748b',
+                    strokeWidth: 1
+                  },
+                  text: {
+                    fill: '#64748b',
+                    fontSize: 12
+                  }
+                },
+                legend: {
+                  text: {
+                    fill: '#1e293b',
+                    fontSize: 14,
+                    fontWeight: 600
+                  }
+                }
+              },
+              grid: {
+                line: {
+                  stroke: '#e2e8f0',
+                  strokeWidth: 1
+                }
+              },
+              crosshair: {
+                line: {
+                  stroke: '#64748b',
+                  strokeWidth: 1,
+                  strokeOpacity: 0.35
+                }
+              }
+            }}
           />
         )}
       </ExpandedChart>
