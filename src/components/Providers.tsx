@@ -7,7 +7,7 @@ const queryClient = new QueryClient();
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string}>
+    <ClerkProvider publishableKey="pk_test_ZGl2aW5lLWtyaWxsLTkzLmNsZXJrLmFjY291bnRzLmRldiQ">
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
