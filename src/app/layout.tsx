@@ -26,64 +26,42 @@ function AuthenticationCheck({ children }: { children: React.ReactNode }) {
         const cookies = document.cookie.split(';');
         const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth='));
         
-        if (authCookie) {
-          // Check number of bookings
-          try {
-            const email = localStorage.getItem('staffEmail');
-            if (email) {
-              const bookingsResponse = await axios.post(`${API_BASE_URL}/query`, {
-                path: "booking:getBookingsByEmail",
-                args: { email }
-              });
-              
-              if (bookingsResponse.data?.value?.length >= 3) {
-                alert('Warning: You have 3 or more active bookings!');
-              }
-            }
-          } catch (error) {
-            console.error('Error checking bookings:', error);
-            throw new Error('Failed to fetch bookings data');
-          } finally {
-            setLoading(false);
-          }
+        if (!authCookie) {
+          const token = searchParams?.get('token');
           
-          return; // Already authenticated
+          if (!token) {
+            throw new Error('No authentication token found');
+          }
+
+          // First verify the token
+          const verifyResponse = await axios.post(`${API_BASE_URL}/query`, {
+            path: "verify:verifyStaffToken",
+            args: { token }
+          });
+
+          if (!verifyResponse.data || verifyResponse.data.status !== 'success') {
+            throw new Error('Invalid token verification response');
+          }
+
+          // Get staff member data
+          const staffMember = verifyResponse.data.value?.staffMember;
+          if (!staffMember) {
+            throw new Error('No staff member data found');
+          }
+
+          // Get email from response or URL params as fallback
+          const emailFromParams = searchParams?.get('email');
+          const staffEmail = staffMember.email || emailFromParams;
+
+          if (!staffEmail) {
+            throw new Error('No email found in response or parameters');
+          }
+
+          // Only store data after all checks pass
+          localStorage.setItem('staffEmail', staffEmail);
+          document.cookie = `role=${staffMember.role || 'manager'}; path=/; secure; samesite=strict`;
+          document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
         }
-
-        const token = searchParams?.get('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        // First verify the token
-        const verifyResponse = await axios.post(`${API_BASE_URL}/query`, {
-          path: "verify:verifyStaffToken",
-          args: { token }
-        });
-
-        if (!verifyResponse.data || verifyResponse.data.status !== 'success') {
-          throw new Error('Invalid token verification response');
-        }
-
-        // Get staff member data
-        const staffMember = verifyResponse.data.value?.staffMember;
-        if (!staffMember) {
-          throw new Error('No staff member data found');
-        }
-
-        // Get email from response or URL params as fallback
-        const emailFromParams = searchParams?.get('email');
-        const staffEmail = staffMember.email || emailFromParams;
-
-        if (!staffEmail) {
-          throw new Error('No email found in response or parameters');
-        }
-
-        // Only store data after all checks pass
-        localStorage.setItem('staffEmail', staffEmail);
-        document.cookie = `role=${staffMember.role || 'staff'}; path=/; secure; samesite=strict`;
-        document.cookie = `auth=${token}; path=/; secure; samesite=strict`;
       } catch (error) {
         console.error('Authentication error:', error);
         
