@@ -3,7 +3,7 @@ export type Promotion = {
 	promotionTitle: string;
 	promotionDescription: string;
     promotionImage: string;
-	promotionType: 'discount' | 'offer'|'upgrade'|'permenant';
+	promotionType: 'discount' | 'permenant' | 'reward_points';
 	promotionValue: number;
 	promotionStartDate: string;
 	promotionEndDate: string;

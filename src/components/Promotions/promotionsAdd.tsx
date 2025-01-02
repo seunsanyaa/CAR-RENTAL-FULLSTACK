@@ -149,13 +149,13 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
 
     try {
       // Validate permanent promotion
-      if (newPromotion.promotionType === 'permenant' && 
+      if ((newPromotion.promotionType === 'permenant' || newPromotion.promotionType === 'reward_points') && 
           (newPromotion.promotionStartDate || newPromotion.promotionEndDate)) {
-        throw new Error('Permanent promotions cannot have start/end dates');
+        throw new Error('Permanent/Reward Points promotions cannot have start/end dates');
       }
 
       // Validate non-permanent promotion
-      if (newPromotion.promotionType !== 'permenant' && 
+      if (newPromotion.promotionType !== 'permenant' && newPromotion.promotionType !== 'reward_points' && 
           (!newPromotion.promotionStartDate || !newPromotion.promotionEndDate)) {
         throw new Error('Non-permanent promotions must have start and end dates');
       }
@@ -328,9 +328,8 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                   required
                 >
                   <option value="discount">Discount</option>
-                  <option value="offer">Offer</option>
-                  <option value="upgrade">Upgrade</option>
                   <option value="permenant">Permanent</option>
+                  <option value="reward_points">Reward Points</option>
                 </select>
               </div>
 
@@ -350,7 +349,7 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                 />
               </div>
 
-              {!isPermanentPromotion ? (
+              {!isPermanentPromotion && newPromotion.promotionType !== 'reward_points' ? (
                 <>
                   <div>
                     <label htmlFor="promotionStartDate" className="text-sm font-medium">
@@ -382,38 +381,58 @@ const PromotionsAdd: React.FC<PromotionsAddProps> = ({ onPromotionAdded }) => {
                 </>
               ) : (
                 <>
-                  <div>
-                    <label htmlFor="minimumRentals" className="text-sm font-medium">
-                      Minimum Rentals Required ({newPromotion.minimumRentals})
-                    </label>
-                    <input
-                      id="minimumRentals"
-                      name="minimumRentals"
-                      type="range"
-                      min="0"
-                      max="20"
-                      value={newPromotion.minimumRentals}
-                      onChange={handleInputChange}
-                      className="w-full"
-                      required
-                    />
-                  </div>
+                  {newPromotion.promotionType === 'reward_points' ? (
+                    <div>
+                      <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
+                        Required Reward Points
+                      </label>
+                      <Input
+                        id="minimumMoneySpent"
+                        name="minimumMoneySpent"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={newPromotion.minimumMoneySpent}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label htmlFor="minimumRentals" className="text-sm font-medium">
+                          Minimum Rentals Required ({newPromotion.minimumRentals})
+                        </label>
+                        <input
+                          id="minimumRentals"
+                          name="minimumRentals"
+                          type="range"
+                          min="0"
+                          max="20"
+                          value={newPromotion.minimumRentals}
+                          onChange={handleInputChange}
+                          className="w-full"
+                          required
+                        />
+                      </div>
 
-                  <div>
-                    <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
-                      Minimum Money Spent ($)
-                    </label>
-                    <Input
-                      id="minimumMoneySpent"
-                      name="minimumMoneySpent"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={newPromotion.minimumMoneySpent}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
+                      <div>
+                        <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
+                          Minimum Money Spent ($)
+                        </label>
+                        <Input
+                          id="minimumMoneySpent"
+                          name="minimumMoneySpent"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newPromotion.minimumMoneySpent}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 

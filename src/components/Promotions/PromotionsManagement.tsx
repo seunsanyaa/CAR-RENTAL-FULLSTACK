@@ -20,6 +20,8 @@ import Image from "next/image";
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_CONVEX_URL}/api`;
 
+type PromotionType = 'discount' | 'permenant' | 'reward_points';
+
 const PromotionsManagement = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isEditingPromotion, setIsEditingPromotion] = useState(false);
@@ -87,7 +89,7 @@ const PromotionsManagement = () => {
           promotionTitle: editingPromotion.promotionTitle,
           promotionDescription: editingPromotion.promotionDescription,
           promotionImage: editingPromotion.promotionImage,
-          promotionType: editingPromotion.promotionType as 'discount' | 'offer' | 'upgrade' | 'permenant',
+          promotionType: editingPromotion.promotionType as 'discount' | 'permenant' | 'reward_points',
           promotionValue: editingPromotion.promotionValue,
           promotionStartDate: editingPromotion.promotionStartDate,
           promotionEndDate: editingPromotion.promotionEndDate,
@@ -95,6 +97,8 @@ const PromotionsManagement = () => {
           goldenMembersOnly: editingPromotion.goldenMembersOnly,
           target: editingPromotion.target as 'all' | 'specific' | 'none',
           specificTarget: editingPromotion.specificTarget,
+          minimumRentals: parseInt(editingPromotion.minimumRentals?.toString() || '0'),
+          minimumMoneySpent: parseFloat(editingPromotion.minimumMoneySpent?.toString() || '0'),
         };
 
         const response = await axios.post(`${API_BASE_URL}/mutation`, {
@@ -198,6 +202,10 @@ const PromotionsManagement = () => {
                           <div>Min. Rentals: {promotion.minimumRentals}</div>
                           <div>Min. Spent: ${promotion.minimumMoneySpent}</div>
                         </div>
+                      ) : promotion.promotionType === 'reward_points' ? (
+                        <div>
+                          <div>Required Points: {promotion.minimumMoneySpent}</div>
+                        </div>
                       ) : (
                         <div>
                           <div>Start: {new Date(promotion.promotionStartDate).toLocaleDateString()}</div>
@@ -254,9 +262,8 @@ const PromotionsManagement = () => {
                                     className="w-full p-2 border rounded"
                                   >
                                     <option value="discount">Discount</option>
-                                    <option value="offer">Offer</option>
-                                    <option value="upgrade">Upgrade</option>
                                     <option value="permenant">Permanent</option>
+                                    <option value="reward_points">Reward Points</option>
                                   </select>
                                 </div>
                                 <div>
@@ -268,44 +275,11 @@ const PromotionsManagement = () => {
                                     value={editingPromotion.promotionValue}
                                     onChange={handleInputChange}
                                     required
+                                    min="0"
+                                    step="0.01"
                                   />
                                 </div>
-                                {editingPromotion.promotionType === 'permenant' ? (
-                                  <>
-                                    <div>
-                                      <label htmlFor="minimumRentals" className="text-sm font-medium">
-                                        Minimum Rentals Required ({editingPromotion.minimumRentals})
-                                      </label>
-                                      <input
-                                        id="minimumRentals"
-                                        name="minimumRentals"
-                                        type="range"
-                                        min="0"
-                                        max="20"
-                                        value={editingPromotion.minimumRentals}
-                                        onChange={handleInputChange}
-                                        className="w-full"
-                                        required
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
-                                        Minimum Money Spent ($)
-                                      </label>
-                                      <Input
-                                        id="minimumMoneySpent"
-                                        name="minimumMoneySpent"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={editingPromotion.minimumMoneySpent}
-                                        onChange={handleInputChange}
-                                        required
-                                      />
-                                    </div>
-                                  </>
-                                ) : (
+                                {editingPromotion.promotionType !== 'permenant' && editingPromotion.promotionType !== 'reward_points' ? (
                                   <>
                                     <div>
                                       <label htmlFor="promotionStartDate" className="text-sm font-medium">Start Date</label>
@@ -329,6 +303,61 @@ const PromotionsManagement = () => {
                                         required
                                       />
                                     </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    {editingPromotion.promotionType === 'reward_points' ? (
+                                      <div>
+                                        <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
+                                          Required Reward Points
+                                        </label>
+                                        <Input
+                                          id="minimumMoneySpent"
+                                          name="minimumMoneySpent"
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          value={editingPromotion.minimumMoneySpent}
+                                          onChange={handleInputChange}
+                                          required
+                                        />
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div>
+                                          <label htmlFor="minimumRentals" className="text-sm font-medium">
+                                            Minimum Rentals Required ({editingPromotion.minimumRentals})
+                                          </label>
+                                          <input
+                                            id="minimumRentals"
+                                            name="minimumRentals"
+                                            type="range"
+                                            min="0"
+                                            max="20"
+                                            value={editingPromotion.minimumRentals}
+                                            onChange={handleInputChange}
+                                            className="w-full"
+                                            required
+                                          />
+                                        </div>
+
+                                        <div>
+                                          <label htmlFor="minimumMoneySpent" className="text-sm font-medium">
+                                            Minimum Money Spent ($)
+                                          </label>
+                                          <Input
+                                            id="minimumMoneySpent"
+                                            name="minimumMoneySpent"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={editingPromotion.minimumMoneySpent}
+                                            onChange={handleInputChange}
+                                            required
+                                          />
+                                        </div>
+                                      </>
+                                    )}
                                   </>
                                 )}
                                 <div>
@@ -450,6 +479,8 @@ const PromotionsManagement = () => {
                                 <p><strong>Minimum Rentals:</strong> {promotion.minimumRentals}</p>
                                 <p><strong>Minimum Money Spent:</strong> ${promotion.minimumMoneySpent}</p>
                               </>
+                            ) : promotion.promotionType === 'reward_points' ? (
+                              <p><strong>Required Points:</strong> {promotion.minimumMoneySpent}</p>
                             ) : (
                               <>
                                 <p><strong>Start Date:</strong> {new Date(promotion.promotionStartDate).toLocaleDateString()}</p>
